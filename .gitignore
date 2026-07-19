@@ -24,3 +24,7 @@ templates/
 *.xlsm
 *.xls
 *.pdf
+
+# ── Kept local only — not part of the shared repo ────────────────────
+Metric Guide.md
+requirements-optional.txt

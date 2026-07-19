@@ -31,8 +31,7 @@ You only do this once per computer:
 
 From there, follow **[User Guide.md](User%20Guide.md)** — the 3-screen
 walkthrough of uploading a file, reviewing the mapping, and downloading the
-workbook. **[Metric Guide.md](Metric%20Guide.md)** explains every metric in
-the output.
+workbook.
 
 **If something fails during setup:** screenshot the launcher window and send
 it to the maintainer. The usual cause is an office network blocking Python
@@ -47,9 +46,7 @@ package downloads (IT can allow `pypi.org`).
 | `app/` | The application — parsing pipeline, column mapper, and the output workbook builder |
 | `start.bat` / `start.command` | Double-click launchers (Windows / Mac) — first run also installs everything |
 | `requirements.txt` | Python components the app needs |
-| `requirements-optional.txt` | Optional AI column-matching fallback (large; the app works without it) |
 | `User Guide.md` | How to use the app, screen by screen |
-| `Metric Guide.md` | What every metric in the output means, in plain finance terms |
 | `WORKFLOW.md` | Technical documentation of the pipeline (for maintainers) |
 | `database/POWERBI_SETUP.md` | Notes for a future cross-GP database (feature currently disabled) |
 

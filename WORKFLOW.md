@@ -339,19 +339,17 @@ Track Record Database/
 ├── venv/                             — Private Python environment (created by the launcher)
 ├── start.bat / start.command / start.sh — Double-click launchers (first run = setup)
 ├── requirements.txt                  — Core dependencies
-├── requirements-optional.txt         — Optional semantic-mapping fallback (large)
 ├── README.md                         — Repo front page + analyst setup steps
 ├── User Guide.md                     — How to use the app, screen by screen
-├── Metric Guide.md                   — Plain-finance explanation of every metric
 └── WORKFLOW.md                       — This document
 ```
 
 **Dependency note:** the semantic column-matching fallback
-(sentence-transformers / torch, `requirements-optional.txt`) is genuinely
-optional — `inferencer.py` wraps it in try/except and degrades to the
-deterministic signals when the packages or the model download are
-unavailable. Verified: the full pipeline parses the samples on core-only
-dependencies.
+(sentence-transformers / scikit-learn / torch — install into the venv
+manually if wanted) is genuinely optional — `inferencer.py` wraps it in
+try/except and degrades to the deterministic signals when the packages or
+the model download are unavailable. Verified: the full pipeline parses the
+samples on core-only dependencies.
 
 ---
 
