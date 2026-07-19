@@ -1,0 +1,6 @@
+# Core dependencies — everything the app needs to run.
+streamlit>=1.35.0
+pandas>=2.0.0
+openpyxl>=3.1.0
+filelock>=3.13.0
+xlrd>=2.0.1

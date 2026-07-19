@@ -1,0 +1,26 @@
+# ── Python ────────────────────────────────────────────────────────────
+venv/
+__pycache__/
+*.pyc
+
+# ── OS / editor junk ─────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+~$*
+.claude/
+
+# ── Generated at runtime — never commit ──────────────────────────────
+outputs/
+configs/
+database/*.csv
+database/*.lock
+
+# ── Confidential GP data — never commit, under any name ──────────────
+IO/
+1 - Example GP Track Records/
+2 - Example TR Analysis for Prospective Fund/
+templates/
+*.xlsx
+*.xlsm
+*.xls
+*.pdf
