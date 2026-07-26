@@ -14,6 +14,12 @@ if not defined PY (
     where python >nul 2>nul
     if not errorlevel 1 set "PY=python"
 )
+REM Fall back to an Anaconda/Miniconda Python (e.g. installed with Spyder)
+if not defined PY (
+    for %%D in ("%USERPROFILE%\anaconda3" "%USERPROFILE%\miniconda3" "%ProgramData%\anaconda3" "%ProgramData%\miniconda3" "%LOCALAPPDATA%\anaconda3" "%LOCALAPPDATA%\miniconda3") do (
+        if exist "%%~D\python.exe" set PY="%%~D\python.exe"
+    )
+)
 if not defined PY (
     echo.
     echo  Python was not found on this computer.
