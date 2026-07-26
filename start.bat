@@ -4,7 +4,17 @@ REM  GP Track Record Analyzer — double-click launcher (Windows)
 REM  First run: sets itself up (needs internet, a few minutes).
 REM  Every run after that: starts instantly, no internet needed.
 REM ════════════════════════════════════════════════════════════════════
-cd /d "%~dp0"
+REM Network-drive folders (university/corporate profiles redirect Desktop
+REM to a UNC path cmd can't cd into) - pushd maps a temp drive letter.
+pushd "%~dp0"
+if errorlevel 1 (
+    echo.
+    echo  Could not open the app folder. Copy the WHOLE folder to the local
+    echo  disk first - e.g. C:\Temp - then double-click this file again.
+    echo.
+    pause
+    exit /b 1
+)
 
 REM ── Find Python ─────────────────────────────────────────────────────
 set "PY="
@@ -37,7 +47,7 @@ if not exist "venv" (
     echo First-time setup: creating the app's private Python environment...
     %PY% -m venv venv
     if errorlevel 1 goto :fail
-    echo Installing components — this needs internet and takes a few minutes...
+    echo Installing components - this needs internet and takes a few minutes...
     venv\Scripts\python -m pip install --upgrade pip >nul 2>nul
     venv\Scripts\pip install -r requirements.txt
     if errorlevel 1 goto :fail
@@ -45,7 +55,7 @@ if not exist "venv" (
 
 REM ── Launch ──────────────────────────────────────────────────────────
 echo.
-echo Starting the GP Track Record Analyzer — your browser will open shortly.
+echo Starting the GP Track Record Analyzer - your browser will open shortly.
 echo Keep this black window open while you work; close it to stop the app.
 echo.
 venv\Scripts\streamlit run app\app.py
@@ -56,7 +66,7 @@ exit /b 0
 echo.
 echo  Setup did not finish. Please take a screenshot of this window and
 echo  send it to the tool maintainer. (Common cause: the office network
-echo  blocks Python package downloads — IT can allow pypi.org.)
+echo  blocks Python package downloads - IT can allow pypi.org.)
 echo.
 pause
 exit /b 1
