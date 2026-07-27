@@ -22,7 +22,7 @@ if [ ! -d venv ]; then
     python3 -m venv venv || { echo "Setup failed at environment creation."; read -r -p "Press Enter to close..."; exit 1; }
     echo "Installing components — this needs internet and takes a few minutes..."
     venv/bin/python -m pip install --upgrade pip >/dev/null 2>&1
-    venv/bin/pip install -r requirements.txt || {
+    venv/bin/python -m pip install -r requirements.txt || {
         echo
         echo "  Setup did not finish. Please screenshot this window and send it"
         echo "  to the tool maintainer. (Common cause: the office network blocks"
@@ -37,4 +37,4 @@ echo
 echo "Starting the GP Track Record Analyzer — your browser will open shortly."
 echo "Keep this window open while you work; close it to stop the app."
 echo
-venv/bin/streamlit run app/app.py
+venv/bin/python -m streamlit run app/app.py

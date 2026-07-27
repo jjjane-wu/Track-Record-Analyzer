@@ -49,7 +49,9 @@ if not exist "venv" (
     if errorlevel 1 goto :fail
     echo Installing components - this needs internet and takes a few minutes...
     venv\Scripts\python -m pip install --upgrade pip >nul 2>nul
-    venv\Scripts\pip install -r requirements.txt
+    REM "python -m pip" (not pip.exe): corporate policies often block the
+    REM unsigned pip.exe/streamlit.exe shims but allow python.exe itself
+    venv\Scripts\python -m pip install -r requirements.txt
     if errorlevel 1 goto :fail
 )
 
@@ -58,7 +60,7 @@ echo.
 echo Starting the GP Track Record Analyzer - your browser will open shortly.
 echo Keep this black window open while you work; close it to stop the app.
 echo.
-venv\Scripts\streamlit run app\app.py
+venv\Scripts\python -m streamlit run app\app.py
 pause
 exit /b 0
 
