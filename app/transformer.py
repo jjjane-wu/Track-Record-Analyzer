@@ -331,6 +331,16 @@ def transform_row(
 
     # ── Classifications ────────────────────────────────────────────────
     sector      = str(get("sector") or "").strip()
+    fund_ccy    = str(get("fund_currency") or "").strip() or None
+    if fund_ccy is not None:
+        # a currency is a short alpha code ("USD", "EUR"); numeric values mean
+        # the mapped column is money data (e.g. a "Reporting Currency" banner
+        # stitched over value columns) — fall back to the workbook currency
+        try:
+            float(fund_ccy.replace(",", ""))
+            fund_ccy = None
+        except ValueError:
+            fund_ccy = fund_ccy if len(fund_ccy) <= 12 else None
     geography   = str(get("region") or "").strip()
     tx_type     = str(get("transaction_type") or "").strip()
     role        = str(get("role") or "").strip()
@@ -462,7 +472,7 @@ def transform_row(
         14: ic_for_bucket,
         15: ic_bucket(ic_for_bucket),
         16: ic_total,
-        17: realized,
+        17: realized if realized is not None else 0.0,
         18: unrealized,
         19: total_value,
         20: gross_moic,
@@ -501,6 +511,7 @@ def transform_row(
         53: exit_ebitda_m,
         54: exit_ev_sales,
         55: val_method or None,
+        90: fund_ccy,
         56: entry_ev_bucket(entry_ev),
         57: entry_mult_bucket(entry_ebitda_m),
         58: ebitda_margin_bucket(entry_margin),

@@ -67,7 +67,7 @@ mapping is what drives generation.
   `[dd-mmm-yy - GP Name] - Segmented Track Record Analysis Output.xlsx`
   (date = processing day; the square brackets are real — Excel's title bar
   merely displays them as parentheses)
-- Saves a copy to `app/outputs/` (the cross-GP CSV database append is
+- Saves a copy to `outputs/` (the cross-GP CSV database append is
   currently disabled — parsed data isn't considered clean enough to
   accumulate yet; `csv_writer.py` remains available to re-enable later)
 - Shows summary metrics, the full mapping log, and an error log if any
@@ -111,7 +111,7 @@ analyst adjust it.
 
 ### Stage 3 — Schema Inference (`inferencer.py`)
 
-Maps every raw column to one of the **32 standardised fields** using
+Maps every raw column to one of the **33 standardised fields** using
 independent signals; 1–3 combine by maximum, conflicts resolve greedily:
 
 | Priority | Signal | Score range |
@@ -181,8 +181,8 @@ Screen 2 (confirmed / review / unmapped fields, unmapped columns, findings).
 
 The output workbook is built **from a blank file** — no heavy template is
 round-tripped. openpyxl writes the data sheets; the pivot tables and charts
-are injected as raw OOXML (openpyxl cannot create pivots). Structure — twelve
-tabs, in order:
+are injected as raw OOXML (openpyxl cannot create pivots). Structure — eight
+tabs, in order (four further tabs are currently switched off — see below):
 
 1. **Table of Contents** — numbered, banded list of internal hyperlinks to
    every other tab; the workbook opens here. New tabs appear automatically.
@@ -190,7 +190,11 @@ tabs, in order:
 2. **Deal Level Inputs** — the clean input data as *values*: 28 columns
    (B..AC), meta block (GP Name / Track Record Date / Currency), table
    `GrossDealLevelInput`. Every data cell is a true input: light-blue fill,
-   blue font.
+   blue font. Per Eric's EWL revision: a **Fund Currency** column sits after
+   Status (mapped from the raw file when a currency column exists — with a
+   guard that rejects numeric values — else defaulted to the workbook
+   currency), the Initial Invested Capital column is removed, and **Realized
+   Value is written as an explicit 0** when the GP provided no value.
 
 3. **Deal List** — the analysis table (`DealLevelInput`, 58 columns B..BG,
    header row 13, data from row 14) in the template's own formula language:
@@ -225,30 +229,22 @@ tabs, in order:
    MOIC / Loss Ratio, four report filters, combo chart) + three
    vintage × sector matrices (counts and pooled MOIC).
 
-8. **Underperforming Assets** — a two-level pivot (Fund → Company) filtered
-   to below-1.0x deals: loss deals, MOIC, current value, impaired capital,
-   hold period.
-
-9. **Partner Attribution** — deal count and pooled MOIC by sourcing partner.
-
-10. **Op Performance** / **11. Op Performance - Unrealized** — IC-weighted
-    operating metrics per fund (CAGRs, margins, multiples, leverage; the
-    unrealized variant adds realized-vs-current value and weighted hold
-    period). Real pivots with Sector / Status / Hold-Period-Bucket report
-    filters (the unrealized tab pre-selects Status = Unrealized) built on
-    the template's calculated fields — which is why the 16 IC-weighted
-    feeder columns are back in the Deal List: calc-field pivots need them
-    in the cache.
-
-12. **Deployment & Exits** — four pivots, template-verbatim: InvCap % and
+8. **Deployment & Exits** — four pivots, template-verbatim: InvCap % and
     Deal Count by vintage × fund (deployment pacing), then Exits % of IC by
     Fund and Exits by Year (fund × exit year, realization pacing) with a
     Status filter pre-selected to Realized. Rows/columns with no data under
     the default filters are omitted, matching what Excel shows on refresh.
 
+**Switched-off tabs (EWL revision):** Underperforming Assets, Partner
+Attribution, Op Performance and Op Performance - Unrealized are currently
+excluded from the output at Eric's request ("don't need it yet"). Their
+builder code is intact but commented out — search `build_output.py` for
+`EWL` to re-enable (sheet creation + writer calls in `build_output()`, and
+the matching blocks in `plan_extra()` / `_extra_jobs()`).
+
 Key mechanics (all verified by opening real files in Excel):
 
-- **One shared pivot cache** for all 45 pivots, shipped fully populated and
+- **One shared pivot cache** for all 33 pivots, shipped fully populated and
   kept **sheet-consistent**: cache and rendered values are recomputed with
   the sheet formulas' exact semantics, so the numbers do not change when
   Excel refreshes the pivots on open (current Excel honours refreshOnLoad).
@@ -268,7 +264,7 @@ Key mechanics (all verified by opening real files in Excel):
 
 ---
 
-## Standardised Field Schema (32 fields)
+## Standardised Field Schema (33 fields)
 
 Monetary fields are in millions of the deal currency (auto-normalised).
 
@@ -287,7 +283,8 @@ Monetary fields are in millions of the deal currency (auto-normalised).
 | `sourcing_partner` | Sourcing Partner | string |
 | `exit_type` | Exit Type | string |
 | `holding_period` | Hold Period | decimal years |
-| `ic_initial` | Initial Invested Capital | millions |
+| `ic_initial` | (no output column — kept as fallback for the IC bucket) | millions |
+| `fund_currency` | Fund Currency (defaults to workbook currency; numeric values rejected) | string |
 | `ic_total` | Total Invested Capital | millions |
 | `realized` | Realized Value | millions |
 | `unrealized` | Current Value | millions |

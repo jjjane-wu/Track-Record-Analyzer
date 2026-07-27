@@ -395,6 +395,20 @@ def _drop_non_deal_rows(
             if comp_v in fund_values and _is_blank(row.get(date_col) if date_col else None):
                 drop_idx.append(idx)
                 continue
+        # 1c) Sentence-like text in the company cell on a row with no entry
+        #     date and no financial values → narrative footnote row (e.g. a
+        #     per-company "Notes:" block under the table). Deals with
+        #     description-style company columns carry dates/financials, which
+        #     keeps this away from them (the bare length heuristic misfired).
+        if comp_col and (date_col or fin_cols):
+            comp_v = str(row.get(comp_col) or "").strip()
+            if (comp_v
+                    and (len(comp_v) > 60 or comp_v.endswith(":")
+                         or len(comp_v.split()) >= 10)
+                    and _is_blank(row.get(date_col) if date_col else None)
+                    and not any(_is_number(row.get(c)) for c in fin_cols)):
+                drop_idx.append(idx)
+                continue
         # 2) No company, no entry date, no financials → note / spacer row.
         if use_signal and not _has_deal_data(row):
             drop_idx.append(idx)

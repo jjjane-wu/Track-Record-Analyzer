@@ -22,20 +22,20 @@ linked-input model (links return "" for blanks, ISBLANK() cannot see them):
 DL_COLS: list[tuple[str, str, int, str]] = [
     ('Company', 'in:Company', 1, 'g'),
     ('Fund', 'in:Fund', 2, 'g'),
-    ('Vintage', 'F:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",YEAR(F{r}))', 4, 'gn'),
+    ('Fund Currency', 'in:Fund Currency', 90, 'g'),
+    ('Vintage', 'F:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",YEAR(G{r}))', 4, 'gn'),
     ('Status', 'in:Status', 5, 'g'),
     ('Inv. Date', 'in:Inv. Date', 6, 'dt'),
     ('Exit Date', 'in:Exit Date', 7, 'dt'),
     ('Exit Year', 'FT:IF((DealLevelInput[[#This Row],[Exit Date]]=""),"n/a",YEAR(DealLevelInput[[#This Row],[Exit Date]]))', 8, 'gn'),
-    ('Hold\nPeriod', 'F:IF((DealLevelInput[[#This Row],[Exit Date]]=""),"n/a",IF(ISNUMBER(G{r}),G{r}-F{r},#REF!-F{r})/365)', 9, 'n'),
+    ('Hold\nPeriod', 'F:IF((DealLevelInput[[#This Row],[Exit Date]]=""),"n/a",IF(ISNUMBER(H{r}),H{r}-G{r},#REF!-G{r})/365)', 9, 'n'),
     ('Hold Period Buckets', 'FT:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$I$7,$J$7,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$I$8,$J$8,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$I$9,$J$9,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$I$10,$J$10,$J$11)))))', 10, 'g'),
     ('Sector', 'in:Sector', 11, 'g'),
     ('Geography', 'in:Geography', 12, 'g'),
-    ('Initial Invested Capital (mlns)', 'in:Initial Invested Capital (mlns)', 13, 'n'),
     ('Total IC mlns for Buckets', 'FT:IF((DealLevelInput[[#This Row],[Total Invested Capital (mlns)]]=""),0,DealLevelInput[[#This Row],[Total Invested Capital (mlns)]])', 14, 'n'),
     ('Initial InvCap Buckets', 'FT:IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]="n/a","n/a",IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]<=$N$7,$O$7,IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]<=$N$8,$O$8,IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]<=$N$9,$O$9,IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]<=$N$10,$O$10,IF(DealLevelInput[[#This Row],[Total IC mlns for Buckets]]<=$N$11,$O$11,$O$12))))))', 15, 'g'),
     ('Total Invested Capital (mlns)', 'in:Total Invested Capital (mlns)', 16, 'n'),
-    ('Realized\nValue', 'in:Realized\nValue', 17, 'n'),
+    ('Realized\nValue', 'in0:Realized\nValue', 17, 'n'),
     ('Current\nValue', 'in:Current\nValue', 18, 'n'),
     ('Total\nValue', 'F:IF(AND(Q{r}="",R{r}=""),"",N(Q{r})+N(R{r}))', 19, 'n'),
     ('Gross\nMOIC', 'FT:IFERROR(DealLevelInput[[#This Row],[Total\nValue]]/DealLevelInput[[#This Row],[Total Invested Capital (mlns)]],"n/a")', 20, 'n'),
@@ -97,10 +97,10 @@ DL_COLS: list[tuple[str, str, int, str]] = [
 ]
 
 # Data-row number formats {column_index0: fmt}
-DL_FORMATS: dict[int, str] = {2: '####', 3: '####', 4: 'dd\\-mmm\\-yy', 5: 'dd\\-mmm\\-yy', 6: '####', 7: '0.0\\ "years"', 8: '0.0\\ "years"', 11: '###,###,###;\\(###,###,###\\);"-"', 12: '###,###,###;\\(###,###,###\\);"-"', 13: '"$"###,###,###;\\("$"###,###,###\\);"-"', 14: '###,###,###;\\(###,###,###\\);"-"', 15: '###,###,###;\\(###,###,###\\);"-"', 16: '###,###,###;\\(###,###,###\\);"-"', 17: '###,###,###;\\(###,###,###\\);"-"', 18: '0.0\\x;\\(0.0\\x\\);"-"', 19: '0.0%', 20: '0.0;\\(0.0\\);"-"', 21: '"$"###,###,###;\\("$"###,###,###\\);"-"', 22: '"$"###,###,###;\\("$"###,###,###\\);"-"', 23: '###,###,###.0;\\(###,###,###.0\\);"-"', 24: '"$"###,###,###;\\("$"###,###,###\\);"-"', 25: '###,###,###.0;\\(###,###,###.0\\);"-"', 26: '"$"###,###,###;\\("$"###,###,###\\);"-"', 30: '0.00%', 31: '0.00%', 32: '0.00%', 33: '0.0%', 34: '###,###.0;\\(###,###.0\\);"-"', 35: '###,###.0;\\(###,###.0\\);"-"', 36: '0.0%', 37: '###,###.0;\\(###,###.0\\);"-"', 38: '0.0\\x;\\(0.0\\x\\);"-"', 39: '###,###.0;\\(###,###.0\\);"-"', 40: '###,###.0;\\(###,###.0\\);"-"', 41: '0.0\\x', 42: '0.0\\x', 43: '0.0\\x', 44: '###,###.0;\\(###,###.0\\);"-"', 45: '###,###.0;\\(###,###.0\\);"-"', 46: '0.0%', 47: '###,###.0;\\(###,###.0\\);"-"', 48: '0.0\\x;\\(0.0\\x\\);"-"', 49: '###,###.0;\\(###,###.0\\);"-"', 50: '###,###.0;\\(###,###.0\\);"-"', 51: '0.0\\x', 52: '0.0\\x', 53: '0.0\\x', 54: '"$"###,###,###;\\("$"###,###,###\\);"-"', 55: '"$"###,###,###;\\("$"###,###,###\\);"-"', 56: '"$"###,###,###;\\("$"###,###,###\\);"-"', 58: '#,##0', 59: '0.0%', 60: '#,##0', 61: '#,##0', 62: '0.0%', 63: '#,##0', 64: '#,##0', 65: '#,##0', 66: '#,##0', 67: '#,##0', 68: '#,##0', 69: '#,##0', 70: '#,##0', 71: '#,##0', 72: '#,##0', 73: '#,##0'}
+DL_FORMATS: dict[int, str] = {3: '####', 4: '####', 5: 'dd\\-mmm\\-yy', 6: 'dd\\-mmm\\-yy', 7: '####', 8: '0.0\\ "years"', 9: '0.0\\ "years"', 12: '###,###,###;\\(###,###,###\\);"-"', 13: '"$"###,###,###;\\("$"###,###,###\\);"-"', 14: '###,###,###;\\(###,###,###\\);"-"', 15: '###,###,###;\\(###,###,###\\);"-"', 16: '###,###,###;\\(###,###,###\\);"-"', 17: '###,###,###;\\(###,###,###\\);"-"', 18: '0.0\\x;\\(0.0\\x\\);"-"', 19: '0.0%', 20: '0.0;\\(0.0\\);"-"', 21: '"$"###,###,###;\\("$"###,###,###\\);"-"', 22: '"$"###,###,###;\\("$"###,###,###\\);"-"', 23: '###,###,###.0;\\(###,###,###.0\\);"-"', 24: '"$"###,###,###;\\("$"###,###,###\\);"-"', 25: '###,###,###.0;\\(###,###,###.0\\);"-"', 26: '"$"###,###,###;\\("$"###,###,###\\);"-"', 30: '0.00%', 31: '0.00%', 32: '0.00%', 33: '0.0%', 34: '###,###.0;\\(###,###.0\\);"-"', 35: '###,###.0;\\(###,###.0\\);"-"', 36: '0.0%', 37: '###,###.0;\\(###,###.0\\);"-"', 38: '0.0\\x;\\(0.0\\x\\);"-"', 39: '###,###.0;\\(###,###.0\\);"-"', 40: '###,###.0;\\(###,###.0\\);"-"', 41: '0.0\\x', 42: '0.0\\x', 43: '0.0\\x', 44: '###,###.0;\\(###,###.0\\);"-"', 45: '###,###.0;\\(###,###.0\\);"-"', 46: '0.0%', 47: '###,###.0;\\(###,###.0\\);"-"', 48: '0.0\\x;\\(0.0\\x\\);"-"', 49: '###,###.0;\\(###,###.0\\);"-"', 50: '###,###.0;\\(###,###.0\\);"-"', 51: '0.0\\x', 52: '0.0\\x', 53: '0.0\\x', 54: '"$"###,###,###;\\("$"###,###,###\\);"-"', 55: '"$"###,###,###;\\("$"###,###,###\\);"-"', 56: '"$"###,###,###;\\("$"###,###,###\\);"-"', 58: '#,##0', 59: '0.0%', 60: '#,##0', 61: '#,##0', 62: '0.0%', 63: '#,##0', 64: '#,##0', 65: '#,##0', 66: '#,##0', 67: '#,##0', 68: '#,##0', 69: '#,##0', 70: '#,##0', 71: '#,##0', 72: '#,##0', 73: '#,##0'}
 
 # Row-12 column tags (Eric: Input / Formula / Entry / Exit markers)
-TAG_ROW: list[tuple[str, str]] = [('B', 'Input'), ('C', 'Input'), ('D', 'Input'), ('E', 'Input'), ('F', 'Input'), ('G', 'Formula'), ('H', 'Formula'), ('I', 'Formula'), ('J', 'Formula'), ('AJ', 'Entry'), ('AK', 'Entry'), ('AL', 'Entry'), ('AM', 'Entry'), ('AN', 'Entry'), ('AO', 'Entry'), ('AP', 'Entry'), ('AQ', 'Entry'), ('AR', 'Entry'), ('AS', 'Entry'), ('AT', 'Exit'), ('AU', 'Exit'), ('AV', 'Exit'), ('AW', 'Exit'), ('AX', 'Exit'), ('AY', 'Exit'), ('AZ', 'Exit'), ('BA', 'Exit'), ('BB', 'Exit')]
+TAG_ROW: list[tuple[str, str]] = [('B', 'Input'), ('C', 'Input'), ('D', 'Input'), ('E', 'Input'), ('F', 'Input'), ('G', 'Input'), ('H', 'Formula'), ('I', 'Formula'), ('J', 'Formula'), ('K', 'Formula'), ('AJ', 'Entry'), ('AK', 'Entry'), ('AL', 'Entry'), ('AM', 'Entry'), ('AN', 'Entry'), ('AO', 'Entry'), ('AP', 'Entry'), ('AQ', 'Entry'), ('AR', 'Entry'), ('AS', 'Entry'), ('AT', 'Exit'), ('AU', 'Exit'), ('AV', 'Exit'), ('AW', 'Exit'), ('AX', 'Exit'), ('AY', 'Exit'), ('AZ', 'Exit'), ('BA', 'Exit'), ('BB', 'Exit')]
 
 # Header block cells (rows 1-12). "{LAST}" -> last data row at build time.
 HEADER_BLOCK: list[dict] = [
@@ -108,24 +108,24 @@ HEADER_BLOCK: list[dict] = [
     {'ref': 'B4', 'v': 'Sponsor/GP:', 'fmt': 'mm-dd-yy', 'bold': False},
     {'ref': 'B5', 'v': 'As of Date:', 'fmt': 'mm-dd-yy', 'bold': False},
     {'ref': 'B6', 'v': 'Currency:', 'fmt': 'mm-dd-yy', 'bold': False},
-    {'ref': 'D9', 'v': 'Number of', 'fmt': None, 'bold': False},
-    {'ref': 'E9', 'v': 'Realized', 'fmt': None, 'bold': False},
-    {'ref': 'D10', 'v': 'Deals', 'fmt': None, 'bold': False},
+    {'ref': 'E9', 'v': 'Number of', 'fmt': None, 'bold': False},
+    {'ref': 'F9', 'v': 'Realized', 'fmt': None, 'bold': False},
     {'ref': 'E10', 'v': 'Deals', 'fmt': None, 'bold': False},
-    {'ref': 'D11', 'v': '=COUNTA(DealLevelInput[Company])', 'fmt': None, 'bold': False},
-    {'ref': 'E11', 'v': '=COUNTIF($E$14:$E${LAST},E9)', 'fmt': None, 'bold': False},
-    {'ref': 'I6', 'v': 'Hold Period', 'fmt': None, 'bold': False},
-    {'ref': 'J6', 'v': 'HP Buckets', 'fmt': None, 'bold': False},
-    {'ref': 'I7', 'v': 2, 'fmt': '0.0', 'bold': False},
-    {'ref': 'J7', 'v': '=CONCATENATE("<=",TEXT(I7,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'I8', 'v': 4, 'fmt': '0.0', 'bold': False},
-    {'ref': 'J8', 'v': '=CONCATENATE(TEXT(I7,"0")," yrs  - ",TEXT(I8,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'I9', 'v': 6, 'fmt': '0.0', 'bold': False},
-    {'ref': 'J9', 'v': '=CONCATENATE(TEXT(I8,"0")," yrs  - ",TEXT(I9,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'I10', 'v': 8, 'fmt': '0.0', 'bold': False},
-    {'ref': 'J10', 'v': '=CONCATENATE(TEXT(I9,"0")," yrs  - ",TEXT(I10,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'I11', 'v': 8, 'fmt': '0.0', 'bold': False},
-    {'ref': 'J11', 'v': '=CONCATENATE(">=",TEXT(I11,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
+    {'ref': 'F10', 'v': 'Deals', 'fmt': None, 'bold': False},
+    {'ref': 'E11', 'v': '=COUNTA(DealLevelInput[Company])', 'fmt': None, 'bold': False},
+    {'ref': 'F11', 'v': '=COUNTIF($F$14:$F${LAST},F9)', 'fmt': None, 'bold': False},
+    {'ref': 'J6', 'v': 'Hold Period', 'fmt': None, 'bold': False},
+    {'ref': 'K6', 'v': 'HP Buckets', 'fmt': None, 'bold': False},
+    {'ref': 'J7', 'v': 2, 'fmt': '0.0', 'bold': False},
+    {'ref': 'K7', 'v': '=CONCATENATE("<=",TEXT(J7,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
+    {'ref': 'J8', 'v': 4, 'fmt': '0.0', 'bold': False},
+    {'ref': 'K8', 'v': '=CONCATENATE(TEXT(J7,"0")," yrs  - ",TEXT(J8,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
+    {'ref': 'J9', 'v': 6, 'fmt': '0.0', 'bold': False},
+    {'ref': 'K9', 'v': '=CONCATENATE(TEXT(J8,"0")," yrs  - ",TEXT(J9,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
+    {'ref': 'J10', 'v': 8, 'fmt': '0.0', 'bold': False},
+    {'ref': 'K10', 'v': '=CONCATENATE(TEXT(J9,"0")," yrs  - ",TEXT(J10,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
+    {'ref': 'J11', 'v': 8, 'fmt': '0.0', 'bold': False},
+    {'ref': 'K11', 'v': '=CONCATENATE(">=",TEXT(J11,"0")," yrs")', 'fmt': '"$"0', 'bold': False},
     {'ref': 'N6', 'v': 'Inv Cap Buckets', 'fmt': None, 'bold': False},
     {'ref': 'O6', 'v': 'Inv Cap Labels', 'fmt': None, 'bold': False},
     {'ref': 'N7', 'v': 250, 'fmt': '0', 'bold': False},
@@ -228,7 +228,7 @@ HEADER_BLOCK: list[dict] = [
     {'ref': 'X11', 'v': '=CONCATENATE(TEXT(W10,"0%")," - ",TEXT(W11,"0%"))', 'fmt': '"$"0', 'bold': False},
     {'ref': 'W12', 'v': '=W11', 'fmt': '0%', 'bold': False},
     {'ref': 'X12', 'v': '=CONCATENATE(">=",TEXT(W12,"0%"))', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'M11', 'v': 'Note: no text inputs, either blank, 0 or a number', 'fmt': None, 'bold': True},
+    {'ref': 'N11', 'v': 'Note: no text inputs, either blank, 0 or a number', 'fmt': None, 'bold': True},
     {'ref': 'AJ10', 'v': 'Financial Metrics', 'fmt': None, 'bold': True},
     {'ref': 'AJ11', 'v': 'Entry Metrics', 'fmt': None, 'bold': True},
     {'ref': 'AT11', 'v': 'Exit/Current Metrics', 'fmt': None, 'bold': True},

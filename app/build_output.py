@@ -51,9 +51,9 @@ from deal_list_spec import DL_COLS, DL_FORMATS, HEADER_BLOCK, TAG_ROW
 
 # Deal Level Inputs: (header, transformer record key).
 INPUT_COLS: list[tuple[str, Any]] = [
-    ("Company", 1), ("Fund", 2), ("Status", 5), ("Inv. Date", 6), ("Exit Date", 7),
-    ("Sector", 11), ("Geography", 12),
-    ("Initial Invested Capital (mlns)", 13), ("Total Invested Capital (mlns)", 16),
+    ("Company", 1), ("Fund", 2), ("Status", 5), ("Fund Currency", 90),
+    ("Inv. Date", 6), ("Exit Date", 7),
+    ("Sector", 11), ("Geography", 12), ("Total Invested Capital (mlns)", 16),
     ("Realized\nValue", 17), ("Current\nValue", 18), ("Transaction Type", 29),
     ("GP Role", 30), ("Process Type", 31), ("Sourcing Partner", 32),
     ("Exit Type", 33), ("COI Deal (Yes/No)", 34), ("Gross TVPI", 20), ("Gross\nIRR", 35),
@@ -65,7 +65,7 @@ INPUT_COLS: list[tuple[str, Any]] = [
 # Template column widths for the Deal Level Inputs tab (letter → width),
 # re-lettered after the 'Data as of' column was removed (user request).
 _INPUT_WIDTHS = {
-    "A": 8.8, "B": 30.5, "C": 15.5, "E": 15.8, "G": 28.5, "H": 20.0,
+    "A": 8.8, "B": 30.5, "C": 15.5, "E": 12.5, "F": 15.8, "H": 28.5,
     "I": 20.0, "J": 18.2, "L": 13.8, "M": 18.5, "Q": 26.2, "R": 16.0,
     "U": 16.2, "V": 17.5, "W": 17.3, "X": 13.5, "Y": 17.5, "Z": 13.5,
     "AA": 20.5, "AB": 18.2, "AC": 17.5,
@@ -414,6 +414,10 @@ def _write_inputs(ws, records: list[dict], gp: str, currency: str,
 
 
 def _dl_src_formula(spec: str, r: int, input_row: int) -> Any:
+    if spec.startswith("in0:"):
+        col = _input_col_letter(spec[4:])
+        src = f"'Deal Level Inputs'!{col}{input_row}"
+        return f'=IF({src}="",0,{src})'       # blank -> explicit 0 (EWL)
     if spec.startswith("in:"):
         col = _input_col_letter(spec[3:])
         src = f"'Deal Level Inputs'!{col}{input_row}"
@@ -499,18 +503,25 @@ def _write_deal_list(ws, records: list[dict], gp: str,
 # Pivot plan — shared by the title writer (openpyxl) and the XML injector
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def _g255(s):
+    """Excel caps pivot cache item text at 255 chars (longer items ⇒
+    "PivotTable cache" repair). Excel itself truncates on refresh, so
+    truncated items are the refresh-stable representation."""
+    return s if s is None or len(s) <= 255 else s[:255]
+
+
 def _grouped_items(records: list[dict], header: str, key: int, kind: str) -> list:
     """Distinct axis items for a grouped field, canonically ordered."""
     if kind == "gn":     # numeric+text — numbers ascending, distinct strings last
         raw = [_rec_value(r, header, key) for r in records]
         nums = sorted({int(v) for v in (_cell_num(x) for x in raw) if v is not None})
-        strs = sorted({s for s in (_cell_str(x) for x in raw
-                                   if _cell_num(x) is None) if s is not None})
+        strs = sorted({_g255(s) for s in (_cell_str(x) for x in raw
+                                          if _cell_num(x) is None) if s is not None})
         return list(nums) + strs
     present = []
     seen = set()
     for rec in records:
-        s = _cell_str(_rec_value(rec, header, key))
+        s = _g255(_cell_str(_rec_value(rec, header, key)))
         if s and s not in seen:
             seen.add(s); present.append(s)
     canon = _CANONICAL_ORDER.get(header)
@@ -603,7 +614,7 @@ def _pivot_graph_cols(p: dict):
 
 
 _DF_CAPTION = {"count": "Count", "moic": "MOIC", "loss": "Loss Ratio",
-               "impaired": "Impaired Loss Ratio", "ic_sum": "Initial Invested Capital"}
+               "impaired": "Impaired Loss Ratio", "ic_sum": "Total Invested Capital"}
 _PCT_FMT = "0%"
 
 
@@ -638,7 +649,7 @@ def _render_pivot_cells(ws, plan: list[dict], records: list[dict]) -> None:
                 ic += _cell_num(rec.get(16)) or 0
                 lo += _cell_num(_rec_value(rec, "InvCapital in Loss Position", 0)) or 0
                 im += _cell_num(_rec_value(rec, "Impaired\nValue", 0)) or 0
-                ii += _cell_num(rec.get(13)) or 0
+                ii += _cell_num(rec.get(16)) or 0
             return cnt, tv, ic, lo, im, ii
 
         top = p["top"]
@@ -761,13 +772,30 @@ def _build_cache_parts(records: list[dict]) -> tuple[bytes, bytes, dict]:
             blank = ' containsBlank="1"' if has_blank else ""
             if kind == "gn":
                 nums = [v for v in items if not isinstance(v, str)]
+                strs = [v for v in items if isinstance(v, str)]
+                gn_blank = any(_rec_value(r, header, key) is None for r in records)
                 body = "".join(
                     (f'<s v="{_esc(v)}"/>' if isinstance(v, str) else f'<n v="{_numstr(float(v))}"/>')
                     for v in items)
-                mixed = ' containsMixedTypes="1"' if any(isinstance(v, str) for v in items) else                         ' containsSemiMixedTypes="0" containsString="0"'
-                mnmx = (f' minValue="{_numstr(float(min(nums)))}" maxValue="{_numstr(float(max(nums)))}"'
-                        if nums else "")
-                attrs = (f'{mixed} containsNumber="1" containsInteger="1"{mnmx} count="{len(items)}"')
+                if nums:
+                    # numeric (optionally mixed with strings) — template shape
+                    mixed = (' containsMixedTypes="1"' if strs else
+                             ' containsSemiMixedTypes="0" containsString="0"')
+                    mnmx = (f' minValue="{_numstr(float(min(nums)))}"'
+                            f' maxValue="{_numstr(float(max(nums)))}"')
+                    attrs = (f'{mixed} containsNumber="1" containsInteger="1"'
+                             f'{mnmx} count="{len(items)}"')
+                elif strs:
+                    # no numeric values in the data ("n/a" only) — declaring
+                    # containsNumber with zero <n> items = cache repair
+                    if gn_blank:
+                        body += "<m/>"
+                    attrs = ((' containsBlank="1"' if gn_blank else "")
+                             + f' count="{len(items) + (1 if gn_blank else 0)}"')
+                else:
+                    # no values at all — all-blank grouped field
+                    body = "<m/>"
+                    attrs = ' containsBlank="1" count="1"'
             else:
                 body = "".join(f'<s v="{_esc(v)}"/>' for v in items)
                 attrs = f'{blank} count="{cnt}"'
@@ -787,7 +815,13 @@ def _build_cache_parts(records: list[dict]) -> tuple[bytes, bytes, dict]:
                 cf.append(f'<cacheField name="{_fname(header)}" numFmtId="0">'
                           f'<sharedItems containsBlank="1"/></cacheField>')
         elif kind == "n":
-            nums = [x for x in (_cell_num(r.get(key)) for r in records) if x is not None]
+            # value source MUST match the records writer (_rec_value applies
+            # _SHEET_CALC) — a field that is raw-blank but sheet-computed
+            # (e.g. 'Total IC mlns for Buckets' = 0 when IC missing) would
+            # otherwise declare blank-only while the records ship numbers,
+            # which Excel repairs away as "PivotTable cache"
+            nums = [x for x in (_cell_num(_rec_value(r, header, key))
+                                for r in records) if x is not None]
             if nums:
                 cf.append(f'<cacheField name="{_fname(header)}" numFmtId="0">'
                           f'<sharedItems containsString="0" containsBlank="1" containsNumber="1" '
@@ -823,9 +857,9 @@ def _build_cache_parts(records: list[dict]) -> tuple[bytes, bytes, dict]:
             if kind in ("g", "gn"):
                 if kind == "gn":
                     n = _cell_num(rv)
-                    v = int(n) if n is not None else _cell_str(rv)
+                    v = int(n) if n is not None else _g255(_cell_str(rv))
                 else:
-                    v = _cell_str(rv)
+                    v = _g255(_cell_str(rv))
                 imap = item_maps[idx]
                 cells.append(f'<x v="{imap[v]}"/>' if v in imap else "<m/>")
             elif kind == "dt":
@@ -838,7 +872,7 @@ def _build_cache_parts(records: list[dict]) -> tuple[bytes, bytes, dict]:
                 x = _cell_num(rv)
                 cells.append(f'<n v="{_numstr(x)}"/>' if x is not None else "<m/>")
             else:
-                s = _cell_str(rv)
+                s = _g255(_cell_str(rv))
                 cells.append(f'<s v="{_esc(s)}"/>' if s is not None else "<m/>")
         rows_xml.append("<r>" + "".join(cells) + "</r>")
     cache_rec = ('<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -849,7 +883,7 @@ def _build_cache_parts(records: list[dict]) -> tuple[bytes, bytes, dict]:
 
 _DF_XML = {
     "count":    '<dataField name="Count" fld="0" subtotal="count" baseField="0" baseItem="0"/>',
-    "ic_sum":   '<dataField name="Initial Invested Capital" fld="{ic}" baseField="0" baseItem="0"/>',
+    "ic_sum":   '<dataField name="Total Invested Capital" fld="{ic}" baseField="0" baseItem="0"/>',
     "moic":     '<dataField name="MOIC" fld="{moic}" baseField="0" baseItem="0" numFmtId="217"/>',
     "loss":     '<dataField name="Loss Ratio" fld="{loss}" baseField="0" baseItem="0" numFmtId="9"/>',
     "impaired": '<dataField name="Impaired Loss Ratio" fld="{imp}" baseField="0" baseItem="0" numFmtId="9"/>',
@@ -859,7 +893,7 @@ _DF_XML = {
 def _build_pivot_table_xml(p: dict) -> bytes:
     n_base = len(DEAL_LIST_COLS)
     n_fields = n_base + len(_CALC_FIELDS)
-    fld_ids = {"ic": _dl_field_index("Initial Invested Capital (mlns)"),
+    fld_ids = {"ic": _dl_field_index("Total Invested Capital (mlns)"),
                "moic": n_base, "loss": n_base + 1, "imp": n_base + 2}
 
     n_axis = len(p["items"])                     # visible items (blank hidden)
@@ -1682,6 +1716,8 @@ def _bx_axis_pivot_xml(name, top, left, axis_idx, n_axis, hidden_blank,
     n_df = len(dfs)
     lcol = get_column_letter(left + n_df)
     rows = list(row_x) if row_x is not None else list(range(n_axis))
+    if not rows:
+        return None                               # empty axis ⇒ invalid pivot
     n_rows = len(rows)
     row_items = "".join('<i><x v="%d"/></i>' % k for k in rows) + '<i t="grand"><x/></i>'
     ci = "<i><x/></i>" + "".join(f'<i i="{k}"><x v="{k}"/></i>' for k in range(1, n_df))
@@ -1736,6 +1772,8 @@ def _bx_matrix_xml(name, top, left, row_idx, n_rows, row_hidden,
                   col_idx: ("axisCol", c_items, nc)}
     page_specs = {p[0]: (p[1], p[2]) for p in pages}
     rows = list(row_x) if row_x is not None else list(range(n_rows))
+    if not rows or not col_x:
+        return None                               # empty axis ⇒ invalid pivot
     n_cols = len(col_x)
     last = get_column_letter(left + n_cols + (1 if grand_col else 0))
     row_items = "".join('<i><x v="%d"/></i>' % k for k in rows) + '<i t="grand"><x/></i>'
@@ -1887,133 +1925,137 @@ def plan_extra(records: list[dict]) -> dict:
                    "v_idx": v_idx, "s_idx": s_idx, "f_idx": f_idx,
                    "calc_moic": calc_moic, "calc_loss": calc_loss}
 
-    # ── Underperforming Assets ────────────────────────────────────────────
-    p_idx, p_key, _pk = _fld_meta("Performing\n(1=Underperform)")
-    perf_items = _grouped_items(records, "Performing\n(1=Underperform)", p_key, "gn")
-    c_idx, c_key, _ck = _fld_meta("Company")
-    companies = _grouped_items(records, "Company", c_key, "g")
-    c_pos = {v: i for i, v in enumerate(companies)}
-    f_pos = {v: i for i, v in enumerate(funds)}
-    loss_recs = [r for r in records
-                 if _rec_value(r, "Performing\n(1=Underperform)", 0) == 1]
-    ua_rows = []
-    for f in funds:
-        frecs = [r for r in loss_recs if in_f(r, f)]
-        if not frecs:
-            continue
-        kids = []
-        for r in sorted(frecs, key=lambda r: _cell_str(r.get(1)) or ""):
-            comp = _cell_str(r.get(1))
-            ic = _cell_num(r.get(16)) or 0.0
-            imp = _cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0
-            kids.append((comp, (1, _sheet_moic(r), _cell_num(r.get(18)) or 0.0,
-                                (imp / ic) if ic else None, _cell_num(r.get(9)))))
-        _cnt, fic, fmoic, _lo, _tv = _ex_group(loss_recs, lambda r, f=f: in_f(r, f))
-        cur = sum(_cell_num(r.get(18)) or 0.0 for r in frecs)
-        imp = sum(_cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0 for r in frecs)
-        hps = [_cell_num(r.get(9)) for r in frecs if _cell_num(r.get(9)) is not None]
-        ua_rows.append((f, (len(frecs), fmoic, cur, (imp / fic) if fic else None,
-                            (sum(hps) / len(hps)) if hps else None), kids))
-    tic = sum(_cell_num(r.get(16)) or 0.0 for r in loss_recs)
-    ttv = sum(_cell_num(_sheet_tv(r)) or 0.0 for r in loss_recs)
-    tcur = sum(_cell_num(r.get(18)) or 0.0 for r in loss_recs)
-    timp = sum(_cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0 for r in loss_recs)
-    thps = [_cell_num(r.get(9)) for r in loss_recs if _cell_num(r.get(9)) is not None]
-    ex["Underperforming Assets"] = {
-        "top": 15, "rows": ua_rows,
-        "total": (len(loss_recs), (ttv / tic) if tic else None, tcur,
-                  (timp / tic) if tic else None,
-                  (sum(thps) / len(thps)) if thps else None),
-        "p_idx": p_idx,
-        "n_perf": len(perf_items),
-        "sel_perf": perf_items.index(1) if 1 in perf_items else None,
-        "f_idx": f_idx, "c_idx": c_idx,
-        "n_funds": len(funds) + (1 if fund_blank else 0),
-        "n_comp": len(companies) + (1 if any(_cell_str(r.get(1)) is None
-                                             for r in records) else 0),
-        "tuples": [(f_pos[f], [c_pos[c] for c, _v in kids if c in c_pos])
-                   for f, _agg, kids in ua_rows],
-    }
+    # ── Underperforming Assets ────────────────────────────────────────────  [EWL: tabs removed — kept for later]  [EWL: tabs removed — kept for later]
+    # p_idx, p_key, _pk = _fld_meta("Performing\n(1=Underperform)")
+    # perf_items = _grouped_items(records, "Performing\n(1=Underperform)", p_key, "gn")
+    # c_idx, c_key, _ck = _fld_meta("Company")
+    # companies = _grouped_items(records, "Company", c_key, "g")
+    # c_pos = {v: i for i, v in enumerate(companies)}
+    # f_pos = {v: i for i, v in enumerate(funds)}
+    # loss_recs = [r for r in records
+    #              if _rec_value(r, "Performing\n(1=Underperform)", 0) == 1]
+    # ua_rows = []
+    # for f in funds:
+    #     frecs = [r for r in loss_recs if in_f(r, f)]
+    #     if not frecs:
+    #         continue
+    #     kids = []
+    #     for r in sorted(frecs, key=lambda r: _cell_str(r.get(1)) or ""):
+    #         comp = _cell_str(r.get(1))
+    #         ic = _cell_num(r.get(16)) or 0.0
+    #         imp = _cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0
+    #         kids.append((comp, (1, _sheet_moic(r), _cell_num(r.get(18)) or 0.0,
+    #                             (imp / ic) if ic else None, _cell_num(r.get(9)))))
+    #     _cnt, fic, fmoic, _lo, _tv = _ex_group(loss_recs, lambda r, f=f: in_f(r, f))
+    #     cur = sum(_cell_num(r.get(18)) or 0.0 for r in frecs)
+    #     imp = sum(_cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0 for r in frecs)
+    #     hps = [_cell_num(r.get(9)) for r in frecs if _cell_num(r.get(9)) is not None]
+    #     ua_rows.append((f, (len(frecs), fmoic, cur, (imp / fic) if fic else None,
+    #                         (sum(hps) / len(hps)) if hps else None), kids))
+    # tic = sum(_cell_num(r.get(16)) or 0.0 for r in loss_recs)
+    # ttv = sum(_cell_num(_sheet_tv(r)) or 0.0 for r in loss_recs)
+    # tcur = sum(_cell_num(r.get(18)) or 0.0 for r in loss_recs)
+    # timp = sum(_cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0 for r in loss_recs)
+    # thps = [_cell_num(r.get(9)) for r in loss_recs if _cell_num(r.get(9)) is not None]
+    # ex["Underperforming Assets"] = {
+    #     "top": 15, "rows": ua_rows,
+    #     "total": (len(loss_recs), (ttv / tic) if tic else None, tcur,
+    #               (timp / tic) if tic else None,
+    #               (sum(thps) / len(thps)) if thps else None),
+    #     "p_idx": p_idx,
+    #     "n_perf": len(perf_items),
+    #     "sel_perf": perf_items.index(1) if 1 in perf_items else None,
+    #     "f_idx": f_idx, "c_idx": c_idx,
+    #     "n_funds": len(funds) + (1 if fund_blank else 0),
+    #     "n_comp": len(companies) + (1 if any(_cell_str(r.get(1)) is None
+    #                                          for r in records) else 0),
+    #     "tuples": [(f_pos[f], [c_pos[c] for c, _v in kids if c in c_pos])
+    #                for f, _agg, kids in ua_rows],
+    # }
 
     # ── Partner Attribution ──────────────────────────────────────────────
-    pa_idx, pa_key, _pak = _fld_meta("Sourcing Partner")
-    partners_cache = _grouped_items(records, "Sourcing Partner", pa_key, "g")
-    partner_blank = any(_cell_str(r.get(pa_key)) is None for r in records)
-    partners = sorted(partners_cache, key=lambda s: s.lower())
-    pa_pos = {v: i for i, v in enumerate(partners_cache)}
-    pa_rows = []
-    for p in partners:
-        cnt, _ic, moic, _lo, _tv = _ex_group(
-            records, lambda r, p=p: _cell_str(r.get(pa_key)) == p)
-        pa_rows.append((p, cnt, moic))
-    ex["Partner Attribution"] = {
-        "top": 11, "rows": pa_rows, "total": (tot[0], tot[2]),
-        "axis_idx": pa_idx, "order_x": [pa_pos[p] for p in partners],
-        "hidden_blank": len(partners_cache) if partner_blank else None,
-    }
+    # pa_idx, pa_key, _pak = _fld_meta("Sourcing Partner")
+    # partners_cache = _grouped_items(records, "Sourcing Partner", pa_key, "g")
+    # partner_blank = any(_cell_str(r.get(pa_key)) is None for r in records)
+    # partners = sorted(partners_cache, key=lambda s: s.lower())
+    # pa_pos = {v: i for i, v in enumerate(partners_cache)}
+    # pa_rows = []
+    # for p in partners:
+    #     cnt, _ic, moic, _lo, _tv = _ex_group(
+    #         records, lambda r, p=p: _cell_str(r.get(pa_key)) == p)
+    #     pa_rows.append((p, cnt, moic))
+    # ex["Partner Attribution"] = {
+    #     "top": 11, "rows": pa_rows, "total": (tot[0], tot[2]),
+    #     "axis_idx": pa_idx, "order_x": [pa_pos[p] for p in partners],
+    #     "hidden_blank": len(partners_cache) if partner_blank else None,
+    # }
 
     # ── Op Performance (+ Unrealized) ────────────────────────────────────
-    def op_tables(subset):
-        out = []
-        for title, h1, h2, kind, fmt in _OP_SECTIONS:
-            rows = []
-            for f in funds:
-                fsub = [r for r in subset if in_f(r, f)]
-                if not fsub:
-                    continue                      # template omits empty funds
-                a, b = _op_pair(fsub, kind)
-                rows.append((f, a, b))
-            out.append({"title": title, "h1": h1, "h2": h2, "kind": kind,
-                        "fmt": fmt, "rows": rows,
-                        "total": _op_pair(subset, kind)})
-        return out
+    # def op_tables(subset):
+    #     out = []
+    #     for title, h1, h2, kind, fmt in _OP_SECTIONS:
+    #         rows = []
+    #         for f in funds:
+    #             fsub = [r for r in subset if in_f(r, f)]
+    #             if not fsub:
+    #                 continue                      # template omits empty funds
+    #             a, b = _op_pair(fsub, kind)
+    #             rows.append((f, a, b))
+    #         out.append({"title": title, "h1": h1, "h2": h2, "kind": kind,
+    #                     "fmt": fmt, "rows": rows,
+    #                     "total": _op_pair(subset, kind)})
+    #     return out
 
-    f_pos_all = {v: i for i, v in enumerate(funds)}
+    # f_pos_all = {v: i for i, v in enumerate(funds)}
     # Grand totals must match the pivot's refresh scope: the blank-fund item
     # is hidden, so totals aggregate fund-visible records only.
-    vis = [r for r in records if any(in_f(r, f) for f in funds)]
-    op_tabs = op_tables(vis)
-    for t in op_tabs:
-        t["row_x"] = [f_pos_all[f] for f, _a, _b in t["rows"]]
-    ex["Op Performance"] = {
-        "tables": op_tabs, "funds": funds,
-        "f_idx": f_idx, "n_funds": len(funds), "fund_blank": fund_blank,
-        "pages": [page_spec("Sector"), page_spec("Status"),
-                  page_spec("Hold Period Buckets")],
-    }
+    # vis = [r for r in records if any(in_f(r, f) for f in funds)]
+    # op_tabs = op_tables(vis)
+    # for t in op_tabs:
+    #     t["row_x"] = [f_pos_all[f] for f, _a, _b in t["rows"]]
+    # ex["Op Performance"] = {
+    #     "tables": op_tabs, "funds": funds,
+    #     "f_idx": f_idx, "n_funds": len(funds), "fund_blank": fund_blank,
+    #     "pages": [page_spec("Sector"), page_spec("Status"),
+    #               page_spec("Hold Period Buckets")],
+    # }
 
-    unreal = [r for r in vis if _cell_str(r.get(5)) == "Unrealized"]
-    opu_tables = op_tables(unreal)
-    opu_tables[0]["title"] = "Growth CAGRs"
-    for t in opu_tables:
-        t["row_x"] = [f_pos_all[f] for f, _a, _b in t["rows"]]
-    rv_rows = [(f,
-                sum(_cell_num(r.get(17)) or 0.0 for r in records if in_f(r, f)),
-                sum(_cell_num(r.get(18)) or 0.0 for r in records if in_f(r, f)))
-               for f in funds]
-    ex["Op Performance - Unrealized"] = {
-        "tables": opu_tables, "funds": funds,
-        "rv_rows": rv_rows,
-        "rv_total": (sum(v for _f, v, _c in rv_rows), sum(c for _f, _v, c in rv_rows)),
-        "f_idx": f_idx, "n_funds": len(funds), "fund_blank": fund_blank,
-        "hp_rows": [(f, _op_hp([r for r in unreal if in_f(r, f)]))
-                    for f in funds
-                    if any(in_f(r, f) for r in unreal)],
-        "hp_total": _op_hp(unreal),
-        "hp_row_x": [f_pos_all[f] for f in funds
-                     if any(in_f(r, f) for r in unreal)],
-        "pages_all": [page_spec("Sector"), page_spec("Status"),
-                      page_spec("Hold Period Buckets")],
-        "pages_unreal": [page_spec("Sector"),
-                         page_spec("Status", selected="Unrealized"),
-                         page_spec("Hold Period Buckets")],
-    }
+    # unreal = [r for r in vis if _cell_str(r.get(5)) == "Unrealized"]
+    # opu_tables = op_tables(unreal)
+    # opu_tables[0]["title"] = "Growth CAGRs"
+    # for t in opu_tables:
+    #     t["row_x"] = [f_pos_all[f] for f, _a, _b in t["rows"]]
+    # rv_rows = [(f,
+    #             sum(_cell_num(r.get(17)) or 0.0 for r in records if in_f(r, f)),
+    #             sum(_cell_num(r.get(18)) or 0.0 for r in records if in_f(r, f)))
+    #            for f in funds]
+    # ex["Op Performance - Unrealized"] = {
+    #     "tables": opu_tables, "funds": funds,
+    #     "rv_rows": rv_rows,
+    #     "rv_total": (sum(v for _f, v, _c in rv_rows), sum(c for _f, _v, c in rv_rows)),
+    #     "f_idx": f_idx, "n_funds": len(funds), "fund_blank": fund_blank,
+    #     "hp_rows": [(f, _op_hp([r for r in unreal if in_f(r, f)]))
+    #                 for f in funds
+    #                 if any(in_f(r, f) for r in unreal)],
+    #     "hp_total": _op_hp(unreal),
+    #     "hp_row_x": [f_pos_all[f] for f in funds
+    #                  if any(in_f(r, f) for r in unreal)],
+    #     "pages_all": [page_spec("Sector"), page_spec("Status"),
+    #                   page_spec("Hold Period Buckets")],
+    #     "pages_unreal": [page_spec("Sector"),
+    #                      page_spec("Status", selected="Unrealized"),
+    #                      page_spec("Hold Period Buckets")],
+    # }
 
     # ── Deployment & Exits ───────────────────────────────────────────────
     e_idx, e_key, _ek = _fld_meta("Exit Year")
     exit_years = _grouped_items(records, "Exit Year", e_key, "gn")
 
     def in_e(rec, y): return _gn_match(rec, "Exit Year", e_key, y)
+
+    # fund-visible records (the blank-fund pivot item is hidden everywhere);
+    # defined here since the Op block that used to own it is commented out
+    vis = [r for r in records if any(in_f(r, f) for f in funds)]
 
     def grid(subset, rowvals, colvals, rpred, cpred, key):
         """cells + totals derived from the same visible grid, so written
@@ -2431,78 +2473,78 @@ def _extra_jobs(ex: dict) -> list:
                 df, flds, pages=s["pages"], grand_col=True))
     jobs.append(("Vintage Perf by Sector", pivots, charts))
 
-    # ── Underperforming Assets ───────────────────────────────────────────
-    ua = ex["Underperforming Assets"]
-    dfs = [_df_xml("Loss Deals", ua["p_idx"], 1),
-           _df_xml("MOIC", cm, 217),
-           _df_xml("Current Value", cur_idx, 3),
-           _df_xml("Impaired Capital", ci, 9),
-           _df_xml("Hold Period", hp_idx, 2, subtotal="average")]
-    jobs.append(("Underperforming Assets",
-                 [_bx_two_level_xml(nm(), ua["top"], 2, ua["f_idx"], ua["c_idx"],
-                                    ua["tuples"], ua["n_funds"], ua["n_comp"],
-                                    [(ua["p_idx"], ua["n_perf"], set(), ua["sel_perf"])],
-                                    dfs, {ua["p_idx"], cm, cur_idx, ci, hp_idx})],
-                 []))
+    # ── Underperforming Assets ───────────────────────────────────────────  [EWL: tabs removed — kept for later]
+    # ua = ex["Underperforming Assets"]
+    # dfs = [_df_xml("Loss Deals", ua["p_idx"], 1),
+    #        _df_xml("MOIC", cm, 217),
+    #        _df_xml("Current Value", cur_idx, 3),
+    #        _df_xml("Impaired Capital", ci, 9),
+    #        _df_xml("Hold Period", hp_idx, 2, subtotal="average")]
+    # jobs.append(("Underperforming Assets",
+    #              [_bx_two_level_xml(nm(), ua["top"], 2, ua["f_idx"], ua["c_idx"],
+    #                                 ua["tuples"], ua["n_funds"], ua["n_comp"],
+    #                                 [(ua["p_idx"], ua["n_perf"], set(), ua["sel_perf"])],
+    #                                 dfs, {ua["p_idx"], cm, cur_idx, ci, hp_idx})],
+    #              []))
 
     # ── Partner Attribution ──────────────────────────────────────────────
-    pa = ex["Partner Attribution"]
-    dfs = [_df_xml("Count", 0, 1, subtotal="count"), _df_xml("MOIC", cm, 217)]
-    jobs.append(("Partner Attribution",
-                 [_bx_axis_pivot_xml(nm(), pa["top"], 2, pa["axis_idx"],
-                                     len(pa["rows"]), pa["hidden_blank"],
-                                     [], dfs, {0, cm}, order_x=pa["order_x"])],
-                 []))
+    # pa = ex["Partner Attribution"]
+    # dfs = [_df_xml("Count", 0, 1, subtotal="count"), _df_xml("MOIC", cm, 217)]
+    # jobs.append(("Partner Attribution",
+    #              [_bx_axis_pivot_xml(nm(), pa["top"], 2, pa["axis_idx"],
+    #                                  len(pa["rows"]), pa["hidden_blank"],
+    #                                  [], dfs, {0, cm}, order_x=pa["order_x"])],
+    #              []))
 
     # ── Op Performance (+ Unrealized): filtered calc-field pivots + charts ─
-    def op_charts(tables, sheet):
-        out = []
-        for t in tables:
-            cats = [f for f, _a, _b in t["rows"]]
-            cx = (op_tpl
-                  .replace("{S1}", _esc(t["h1"])).replace("{S2}", _esc(t["h2"]))
-                  .replace("{CATS}", _str_lit(cats))
-                  .replace("{V1}", _num_lit([a for _f, a, _b in t["rows"]], t["fmt"]))
-                  .replace("{V2}", _num_lit([b for _f, _a, b in t["rows"]], t["fmt"])))
-            out.append((cx, 6, max(t["thead"] - 2, 0), 9, 12))
-        return out
+    # def op_charts(tables, sheet):
+    #     out = []
+    #     for t in tables:
+    #         cats = [f for f, _a, _b in t["rows"]]
+    #         cx = (op_tpl
+    #               .replace("{S1}", _esc(t["h1"])).replace("{S2}", _esc(t["h2"]))
+    #               .replace("{CATS}", _str_lit(cats))
+    #               .replace("{V1}", _num_lit([a for _f, a, _b in t["rows"]], t["fmt"]))
+    #               .replace("{V2}", _num_lit([b for _f, _a, b in t["rows"]], t["fmt"])))
+    #         out.append((cx, 6, max(t["thead"] - 2, 0), 9, 12))
+    #     return out
 
-    _OP_CALC = {"cagr": (cm + 3, cm + 4, 9), "margin": (cm + 5, cm + 6, 9),
-                "mult": (cm + 7, cm + 8, 217), "lev": (cm + 9, cm + 10, 217)}
+    # _OP_CALC = {"cagr": (cm + 3, cm + 4, 9), "margin": (cm + 5, cm + 6, 9),
+    #             "mult": (cm + 7, cm + 8, 217), "lev": (cm + 9, cm + 10, 217)}
 
-    def op_pivots(tab, pages, consolidated=False):
-        root = ' grandTotalCaption="Consolidated"' if consolidated else ""
-        hidden = tab["n_funds"] if tab["fund_blank"] else None
-        out = []
-        for t in tab["tables"]:
-            f1, f2, nf = _OP_CALC[t["kind"]]
-            dfs = [_df_xml(t["h1"], f1, nf), _df_xml(t["h2"], f2, nf)]
-            out.append(_bx_axis_pivot_xml(
-                nm(), t["top"], 2, tab["f_idx"], tab["n_funds"], hidden,
-                pages, dfs, {f1, f2}, row_x=t["row_x"], extra_root=root))
-        return out
+    # def op_pivots(tab, pages, consolidated=False):
+    #     root = ' grandTotalCaption="Consolidated"' if consolidated else ""
+    #     hidden = tab["n_funds"] if tab["fund_blank"] else None
+    #     out = []
+    #     for t in tab["tables"]:
+    #         f1, f2, nf = _OP_CALC[t["kind"]]
+    #         dfs = [_df_xml(t["h1"], f1, nf), _df_xml(t["h2"], f2, nf)]
+    #         out.append(_bx_axis_pivot_xml(
+    #             nm(), t["top"], 2, tab["f_idx"], tab["n_funds"], hidden,
+    #             pages, dfs, {f1, f2}, row_x=t["row_x"], extra_root=root))
+    #     return out
 
-    op = ex["Op Performance"]
-    jobs.append(("Op Performance", op_pivots(op, op["pages"]),
-                 op_charts(op["tables"], "Op Performance")))
+    # op = ex["Op Performance"]
+    # jobs.append(("Op Performance", op_pivots(op, op["pages"]),
+    #              op_charts(op["tables"], "Op Performance")))
 
-    opu = ex["Op Performance - Unrealized"]
-    dfs = [_df_xml("Realized Value", real_idx, 3),
-           _df_xml("Current Value", cur_idx, 3)]
-    opu_pivots = [_bx_axis_pivot_xml(
-        nm(), opu["rv_top"], 2, opu["f_idx"], opu["n_funds"],
-        opu["n_funds"] if opu["fund_blank"] else None,
-        opu["pages_all"], dfs, {real_idx, cur_idx})]
-    opu_pivots += op_pivots(opu, opu["pages_unreal"], consolidated=True)
-    opu_pivots.append(_bx_axis_pivot_xml(
-        nm(), opu["hp_top"], 2, opu["f_idx"], opu["n_funds"],
-        opu["n_funds"] if opu["fund_blank"] else None,
-        opu["pages_unreal"],
-        [_df_xml("Sum of CalcWghtedHoldPeriod", cm + 11, 216)],
-        {cm + 11}, row_x=opu["hp_row_x"],
-        extra_root=' grandTotalCaption="Consolidated"'))
-    jobs.append(("Op Performance - Unrealized", opu_pivots,
-                 op_charts(opu["tables"], "Op Performance - Unrealized")))
+    # opu = ex["Op Performance - Unrealized"]
+    # dfs = [_df_xml("Realized Value", real_idx, 3),
+    #        _df_xml("Current Value", cur_idx, 3)]
+    # opu_pivots = [_bx_axis_pivot_xml(
+    #     nm(), opu["rv_top"], 2, opu["f_idx"], opu["n_funds"],
+    #     opu["n_funds"] if opu["fund_blank"] else None,
+    #     opu["pages_all"], dfs, {real_idx, cur_idx})]
+    # opu_pivots += op_pivots(opu, opu["pages_unreal"], consolidated=True)
+    # opu_pivots.append(_bx_axis_pivot_xml(
+    #     nm(), opu["hp_top"], 2, opu["f_idx"], opu["n_funds"],
+    #     opu["n_funds"] if opu["fund_blank"] else None,
+    #     opu["pages_unreal"],
+    #     [_df_xml("Sum of CalcWghtedHoldPeriod", cm + 11, 216)],
+    #     {cm + 11}, row_x=opu["hp_row_x"],
+    #     extra_root=' grandTotalCaption="Consolidated"'))
+    # jobs.append(("Op Performance - Unrealized", opu_pivots,
+    #              op_charts(opu["tables"], "Op Performance - Unrealized")))
 
     # ── Deployment & Exits ───────────────────────────────────────────────
     de = ex["Deployment & Exits"]
@@ -2695,7 +2737,9 @@ def _inject_pivots(wb_bytes: bytes, records: list[dict], plan: list[dict],
 
     _merge_sheet_rels(rl_target, sheet_rel_entries)
 
-    pc_pivots = ([p for p in pc_plan if p.get("type") in ("matrix", "count", "total")]
+    pc_pivots = ([p for p in pc_plan if p.get("type") in ("matrix", "count", "total")
+                  and not (p.get("type") == "matrix"
+                           and (not p.get("cols") or not p.get("funds")))]
                  if (pc_plan and pc_target) else [])
     rd_pivots = ([p for p in rd_plan if p.get("type") == "rd"]
                  if (rd_plan and rd_target) else [])
@@ -2907,6 +2951,8 @@ def _inject_pivots(wb_bytes: bytes, records: list[dict], plan: list[dict],
         next_rid_x = max((int(x) for x in re.findall(r'Id="rId(\d+)"', existing_x)),
                          default=0) + 1
         for xml in sheet_pivots:
+            if xml is None:                       # degenerate pivot skipped
+                continue
             pv_no += 1
             part = f"xl/pivotTables/pivotTable{pv_no}.xml"
             added[part] = xml
@@ -3033,6 +3079,11 @@ def build_output(records: list[dict], gp_name: str, currency: str = "USD",
                  track_record_date: date | None = None) -> bytes:
     """Build the 3-tab output workbook (values + linking formulas + real pivots)."""
     errs = phase_errors if phase_errors is not None else []
+    for rec in records:                        # EWL defaults
+        if not _cell_str(rec.get(90)):
+            rec[90] = currency                 # Fund Currency
+        if _cell_num(rec.get(17)) is None:
+            rec[17] = 0.0                      # Realized Value: 0 if missing
     wb = openpyxl.Workbook()
     ws_in = wb.active; ws_in.title = "Deal Level Inputs"
     wb.create_sheet("Table of Contents", 0)
@@ -3041,10 +3092,10 @@ def build_output(records: list[dict], gp_name: str, currency: str = "USD",
     ws_rd = wb.create_sheet("Return Dispersion")
     ws_pc = wb.create_sheet("Portfolio Construction")
     ws_vs = wb.create_sheet("Vintage Perf by Sector")
-    ws_ua = wb.create_sheet("Underperforming Assets")
-    ws_pa = wb.create_sheet("Partner Attribution")
-    ws_op = wb.create_sheet("Op Performance")
-    ws_ou = wb.create_sheet("Op Performance - Unrealized")
+    # ws_ua = wb.create_sheet("Underperforming Assets")   # EWL: not needed yet
+    # ws_pa = wb.create_sheet("Partner Attribution")      # EWL: not needed yet
+    # ws_op = wb.create_sheet("Op Performance")           # EWL: not needed yet
+    # ws_ou = wb.create_sheet("Op Performance - Unrealized")  # EWL: not needed yet
     ws_de = wb.create_sheet("Deployment & Exits")
     wb.active = 0
 
@@ -3061,10 +3112,10 @@ def build_output(records: list[dict], gp_name: str, currency: str = "USD",
         _write_rd_sheet(ws_rd, rd_plan)
         _write_pc_sheet(ws_pc, pc_plan, records)
         _write_vs_sheet(ws_vs, ex["Vintage Perf by Sector"])
-        _write_ua_sheet(ws_ua, ex["Underperforming Assets"])
-        _write_pa_sheet(ws_pa, ex["Partner Attribution"])
-        _write_op_sheet(ws_op, ex["Op Performance"])
-        _write_opu_sheet(ws_ou, ex["Op Performance - Unrealized"])
+        # _write_ua_sheet(ws_ua, ex["Underperforming Assets"])   # EWL
+        # _write_pa_sheet(ws_pa, ex["Partner Attribution"])      # EWL
+        # _write_op_sheet(ws_op, ex["Op Performance"])           # EWL
+        # _write_opu_sheet(ws_ou, ex["Op Performance - Unrealized"])  # EWL
         _write_de_sheet(ws_de, ex["Deployment & Exits"])
         _write_toc(wb)
     except Exception as e:

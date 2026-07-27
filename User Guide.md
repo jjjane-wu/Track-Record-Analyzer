@@ -49,7 +49,7 @@ leaves it, and no external services are involved.
 
 ### Screen 2 — Review Mapping  ← *the one step that needs your judgment*
 
-The tool has matched the GP's raw columns to our 32 standard fields, and this
+The tool has matched the GP's raw columns to our 33 standard fields, and this
 screen asks you to check its work. It is split into three colour-coded
 blocks:
 
@@ -96,14 +96,15 @@ mapping instead, so any regenerated copy comes out right.
 
 ---
 
-## What you get — twelve tabs, one line each
+## What you get — eight tabs, one line each
 
 Every tab opens with a numbered, clickable contents list; the workbook opens
 on a Table of Contents that jumps to any tab.
 
 1. **Table of Contents** — navigation.
-2. **Deal Level Inputs** — the cleaned deal data (28 standard columns); the
-   single source of truth and the only tab you edit.
+2. **Deal Level Inputs** — the cleaned deal data (28 standard columns, incl.
+   a per-fund currency; Realized Value shows an explicit 0 when the GP
+   provided none); the single source of truth and the only tab you edit.
 3. **Deal List** — full per-deal analytics as live formulas; the blue
    threshold tables set every bucket boundary (edit = instant sensitivity).
 4. **Return & Loss Ratios** — pooled MOIC + Loss Ratio across 15 cuts
@@ -114,16 +115,12 @@ on a Table of Contents that jumps to any tab.
    deal-count attributes — concentration, strategy drift, sourcing profile.
 7. **Vintage Perf by Sector** — invested capital, MOIC and loss ratio by
    vintage (4 filters) plus vintage × sector count and pooled-MOIC matrices.
-8. **Underperforming Assets** — every deal below 1.0x, listed under its fund,
-   with MOIC, current value, impairment and hold period.
-9. **Partner Attribution** — deal count and pooled MOIC per deal lead /
-   sourcing partner — key-person and repeatability evidence.
-10. **Op Performance** — IC-weighted revenue/EBITDA CAGRs, margins, multiples
-    and leverage per fund (entry vs exit), chart per section.
-11. **Op Performance - Unrealized** — the same operating view on the current
-    (unrealized) book, plus realized-vs-unrealized value per fund.
-12. **Deployment & Exits** — capital deployment pacing (vintage × fund) and
-    realization pacing (fund × exit year), pre-filtered to realized exits.
+8. **Deployment & Exits** — capital deployment pacing (vintage × fund) and
+   realization pacing (fund × exit year), pre-filtered to realized exits.
+
+*(Four further tabs — Underperforming Assets, Partner Attribution, Op
+Performance, Op Performance - Unrealized — are currently switched off at
+Eric's request; they can be re-enabled later.)*
 
 For metric definitions and how to read them, see **Metric Guide.md**.
 
