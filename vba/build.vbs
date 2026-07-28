@@ -46,13 +46,18 @@ If Err.Number <> 0 Then Fail xl, "could not open template: " & Err.Description
 Dim wbI: Set wbI = xl.Workbooks.Open(inPath, True, True)   ' update-links no, read-only
 If Err.Number <> 0 Then Fail xl, "could not open inputs: " & Err.Description
 
-' replace the template's Deal Level Inputs with the fresh one
+' Replace the template's Deal Level Inputs with the fresh one.
+' Rename-old -> copy-new -> delete-old: a straight delete fails when the
+' old sheet is the template's only sheet, and the copy would then land
+' as "Deal Level Inputs (2)" while the macro silently reads stale data.
 Dim ws: Set ws = Nothing
 Set ws = wbT.Worksheets(SHEET_NAME)
-If Not ws Is Nothing Then ws.Delete
 Err.Clear
+If Not ws Is Nothing Then ws.Name = "__old_inputs__"
 wbI.Worksheets(SHEET_NAME).Copy , wbT.Worksheets(wbT.Worksheets.Count)
 If Err.Number <> 0 Then Fail xl, "could not copy '" & SHEET_NAME & "' from inputs: " & Err.Description
+If Not ws Is Nothing Then ws.Delete
+Err.Clear
 wbI.Close False
 
 ' run the macro (errors inside VBA surface here)

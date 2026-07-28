@@ -10,8 +10,7 @@ Option Explicit
 
 Public Const DL_HDR_ROW As Long = 13          ' Deal List header row
 Public Const DL_DATA_ROW As Long = 14         ' first data row
-Public Const IN_HDR_ROW As Long = 6           ' Deal Level Inputs header row
-Public Const IN_DATA_ROW As Long = 7          ' first input data row
+Public Const IN_DATA_ROW As Long = 7          ' first input data row (headers row 6)
 Public Const FIRST_COL As Long = 2            ' both tables start at column B
 
 ' number of deals = filled Company cells on the inputs sheet
@@ -25,12 +24,18 @@ Public Function DealCount() As Long
     DealCount = r - IN_DATA_ROW
 End Function
 
-' column letter of an input-tab header (for in:-link resolution)
+' column letter of an input-tab header (for in:-link resolution).
+' Called once per formula cell, so the spec array is loaded once and cached.
 Private Function InputColLetter(ByVal header As String) As String
-    Dim h() As String, i As Long
-    modSpec.LoadInputCols h
+    Static loaded As Boolean
+    Static hdrs() As String
+    Dim i As Long
+    If Not loaded Then
+        modSpec.LoadInputCols hdrs
+        loaded = True
+    End If
     For i = 1 To modSpec.IN_NCOLS
-        If h(i) = header Then
+        If hdrs(i) = header Then
             InputColLetter = Split(Cells(1, FIRST_COL + i - 1).Address, "$")(1)
             Exit Function
         End If

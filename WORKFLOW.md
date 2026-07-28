@@ -179,6 +179,11 @@ Screen 2 (confirmed / review / unmapped fields, unmapped columns, findings).
 
 ## Output Builder (`build_output.py`)
 
+> **Branch note (`vba`):** on this branch the output builder is being ported
+> to Excel VBA with native pivots — see `vba/README.md`. The Python builder
+> below still works and stays the reference implementation; `vba/modSpec.bas`
+> is *generated from* the specs described here, so the two cannot drift.
+
 The output workbook is built **from a blank file** — no heavy template is
 round-tripped. openpyxl writes the data sheets; the pivot tables and charts
 are injected as raw OOXML (openpyxl cannot create pivots). Structure — eight

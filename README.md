@@ -1,7 +1,16 @@
-# GP Track Record Analyzer
+# GP Track Record Analyzer — VBA hybrid edition (branch `vba`)
+
+> **This branch** is the experimental hybrid version: Python keeps doing the
+> parsing and column mapping, while the analysis workbook is built **inside
+> Excel by VBA** with native pivot tables — so analysts need nothing but
+> Excel, and the whole build can run from one command (`vba/build.bat`).
+> Everything VBA-specific lives in the [`vba/`](vba/) folder — start with
+> **[vba/README.md](vba/README.md)** for the architecture, assembly steps,
+> and what to validate on a work laptop. The Python app below still works
+> unchanged and remains the reference implementation.
 
 Turns any GP's raw track record Excel file into the standardized
-**Segmented Track Record Analysis Output** workbook — 12 tabs of live pivot
+**Segmented Track Record Analysis Output** workbook — 8 tabs of live pivot
 tables and charts — in about a minute, through a simple web page.
 
 Upload the GP's file → confirm the column mapping on screen → download the
@@ -46,6 +55,7 @@ package downloads (IT can allow `pypi.org`).
 | `app/` | The application — parsing pipeline, column mapper, and the output workbook builder |
 | `start.bat` / `start.command` | Double-click launchers (Windows / Mac) — first run also installs everything |
 | `requirements.txt` | Python components the app needs |
+| `vba/` | **This branch's focus**: VBA output builder — importable modules, code generator, one-command build scripts (see `vba/README.md`) |
 | `User Guide.md` | How to use the app, screen by screen |
 | `WORKFLOW.md` | Technical documentation of the pipeline (for maintainers) |
 | `database/POWERBI_SETUP.md` | Notes for a future cross-GP database (feature currently disabled) |

@@ -19,14 +19,21 @@ raw GP file ──► Python app (parse + map, unchanged)
         with REAL native pivots
 ```
 
-## What the prototype covers
+## Files in this folder
 
-| Module | Contents |
+| File | Role |
 |---|---|
-| `modSpec.bas` | **Generated** — Deal List schema (74 columns, formulas, tag row), input column order, header block (bucket threshold tables), the 15 Return & Loss Ratios pivot specs. Regenerate with `python3 vba/generate_vba_spec.py` after any spec change — never edit by hand. |
+| `modSpec.bas` | **Generated — never edit by hand.** Deal List schema (74 columns, formulas, tag row), input column order, header block (bucket threshold tables), the 15 Return & Loss Ratios pivot specs. |
+| `generate_vba_spec.py` | The generator for `modSpec.bas` — reads `app/deal_list_spec.py` + `app/build_output.py`, so the VBA and Python versions share one schema and cannot drift. Re-run after any spec change. |
 | `modBuild.bas` | Builds the Deal List: meta, bucket helper tables, tag row, `DealLevelInput` table, all column formulas (same `in:/in0:/F:/FT:` notation as Python). |
 | `modPivots.bas` | Builds Return & Loss Ratios: 15 native pivots with Count / MOIC / Loss-Ratio (calculated fields → pooled, filter-correct math) + Fund/Status/HP-Buckets report filters. |
-| `modMain.bas` | `BuildAnalysisWorkbook()` entry point. |
+| `modMain.bas` | Entry points: `BuildAnalysisWorkbook()` (interactive, dialogs) and `BuildHeadless()` (for scripted runs — no dialogs, errors propagate). |
+| `build.vbs` | Windows COM driver: opens the template invisibly, injects the inputs sheet, runs the macro, saves a macro-free `.xlsx`, exits nonzero on failure. |
+| `build.bat` | One-command wrapper for `build.vbs` (drag-and-drop friendly). |
+| `mac_build.sh` | Mac dev helper: open + run macro + save via AppleScript. |
+
+The four `.bas` files are the version-controlled source; the assembled
+`TR-Analyzer.xlsm` itself stays out of git (`*.xlsm` is ignored).
 
 Not yet ported: Return Dispersion, Portfolio Construction, Vintage Perf by
 Sector, Deployment & Exits, charts, TOC, exact template styling.
