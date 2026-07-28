@@ -540,7 +540,7 @@ Public Sub LoadHeaderBlock(refs() As String, vals() As String, isNum() As Boolea
     vals(123) = "=W11"
     refs(124) = "X12"
     vals(124) = "=CONCATENATE("">="",TEXT(W12,""0%""))"
-    refs(125) = "N11"
+    refs(125) = "M11"
     vals(125) = "Note: no text inputs, either blank, 0 or a number"
     refs(126) = "AJ10"
     vals(126) = "Financial Metrics"

@@ -228,7 +228,7 @@ HEADER_BLOCK: list[dict] = [
     {'ref': 'X11', 'v': '=CONCATENATE(TEXT(W10,"0%")," - ",TEXT(W11,"0%"))', 'fmt': '"$"0', 'bold': False},
     {'ref': 'W12', 'v': '=W11', 'fmt': '0%', 'bold': False},
     {'ref': 'X12', 'v': '=CONCATENATE(">=",TEXT(W12,"0%"))', 'fmt': '"$"0', 'bold': False},
-    {'ref': 'N11', 'v': 'Note: no text inputs, either blank, 0 or a number', 'fmt': None, 'bold': True},
+    {'ref': 'M11', 'v': 'Note: no text inputs, either blank, 0 or a number', 'fmt': None, 'bold': True},
     {'ref': 'AJ10', 'v': 'Financial Metrics', 'fmt': None, 'bold': True},
     {'ref': 'AJ11', 'v': 'Entry Metrics', 'fmt': None, 'bold': True},
     {'ref': 'AT11', 'v': 'Exit/Current Metrics', 'fmt': None, 'bold': True},
