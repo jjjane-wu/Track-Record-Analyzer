@@ -606,3 +606,32 @@ Public Sub LoadPageFields(p() As String)
     p(2) = "Status"
     p(3) = "Hold Period Buckets"
 End Sub
+
+' Canonical display order for bucket axes (native pivots would otherwise
+' sort alphabetically). Returns Empty when the field has no fixed order.
+Public Function CanonicalOrder(ByVal fieldName As String) As Variant
+    Select Case fieldName
+        Case "Revenue Buckets"
+            CanonicalOrder = Array("<=$0m", "$0 - $250m", "$250 - $500m", "$500 - $1000m", "$1000 - $1500m", ">=$1500m")
+        Case "EBITDA Buckets"
+            CanonicalOrder = Array("<=$0m", "$0 - $100m", "$100 - $200m", "$200 - $300m", "$300 - $400m", ">=$400m")
+        Case "Entry Multiple Bucket"
+            CanonicalOrder = Array("<=0x", "0x - 5x", "5x - 10x", "10x - 15x", "15x - 20x", ">=20x")
+        Case "Entry EBITDA Margin Bucket"
+            CanonicalOrder = Array("<=20%", "20% - 30%", "30% - 40%", "40% - 50%", ">=50%")
+        Case "Entry Enterprise" & Chr(10) & "ValueBuckets"
+            CanonicalOrder = Array("<=$0m", "$0 - $500m", "$500 - $1000m", "$1000 - $1500m", "$1500 - $2000m", ">=$2000m")
+        Case "Initial InvCap Buckets"
+            CanonicalOrder = Array("<=$250m", "$250 - $500m", "$500 - $1000m", "$1000 - $1250m", "$1250 - $1500m", ">=$1500m")
+        Case "Hold Period Buckets"
+            CanonicalOrder = Array("<=2 yrs", "2 yrs  - 4 yrs", "4 yrs  - 6 yrs", "6 yrs  - 8 yrs", ">=8 yrs")
+        Case "Status"
+            CanonicalOrder = Array("Realized", "Unrealized")
+        Case "MOIC Buckets"
+            CanonicalOrder = Array("<=1.0x", "1.0x - 2.0x", "2.0x - 3.0x", ">=3.0x")
+        Case "IRR Buckets"
+            CanonicalOrder = Array("<=0%", "0% - 10%", "10% - 20%", ">=20%")
+        Case Else
+            CanonicalOrder = Empty
+    End Select
+End Function

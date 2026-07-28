@@ -26,8 +26,15 @@ raw GP file ──► Python app (parse + map, unchanged)
 | `modSpec.bas` | **Generated — never edit by hand.** Deal List schema (74 columns, formulas, tag row), input column order, header block (bucket threshold tables), the 15 Return & Loss Ratios pivot specs. |
 | `generate_vba_spec.py` | The generator for `modSpec.bas` — reads `app/deal_list_spec.py` + `app/build_output.py`, so the VBA and Python versions share one schema and cannot drift. Re-run after any spec change. |
 | `modBuild.bas` | Builds the Deal List: meta, bucket helper tables, tag row, `DealLevelInput` table, all column formulas (same `in:/in0:/F:/FT:` notation as Python). |
-| `modPivots.bas` | Builds Return & Loss Ratios: 15 native pivots with Count / MOIC / Loss-Ratio (calculated fields → pooled, filter-correct math) + Fund/Status/HP-Buckets report filters. |
-| `modMain.bas` | Entry points: `BuildAnalysisWorkbook()` (interactive, dialogs) and `BuildHeadless()` (for scripted runs — no dialogs, errors propagate). |
+| `modUtil.bas` | Shared plumbing: the one pivot cache, calculated fields, meta blocks, report filters, canonical bucket ordering, blank-hiding, mini contents lists. |
+| `modCharts.bas` | Static snapshot charts: pivot values are copied via `GetPivotData` into a hidden `_ChartData` sheet right after each (still unfiltered) pivot is built, and plain charts are drawn over that block — so filtering a pivot never changes a chart, same rule as the Python build. |
+| `modPivots.bas` | Return & Loss Ratios: 15 native pivots (Count / pooled MOIC / Loss Ratio, report filters, bucket order, hidden blanks) + a combo chart each. |
+| `modDispersion.bas` | Return Dispersion: MOIC + IRR bucket pivots (Count / % IC / actual average) + % IC column charts (n/a bucket excluded from charts). |
+| `modConstruction.bas` | Portfolio Construction: two Fund × Sector/Geography %-of-row matrices with stacked charts, five deal-count pivots with pies, total count. |
+| `modVintage.bas` | Vintage Perf by Sector: the vintage performance pivot (4 filters, combo chart) + three Vintage × Sector matrices (counts and pooled MOIC). |
+| `modDeployment.bas` | Deployment & Exits: InvCap % and Deal Count (vintage × fund), Exits % of IC and Exits by Year (fund × exit year, Status pre-set to Realized, n/a year hidden). |
+| `modToc.bas` | Table of Contents: numbered internal links, moved to first position. |
+| `modMain.bas` | Orchestration + entry points: `BuildAnalysisWorkbook()` (interactive) and `BuildHeadless()` (scripted). Each tab builds in its own error scope — one bad tab reports instead of killing the run — and sheets are arranged in the standard order at the end. |
 | `build.vbs` | Windows COM driver: opens the template invisibly, injects the inputs sheet, runs the macro, saves a macro-free `.xlsx`, exits nonzero on failure. |
 | `build.bat` | One-command wrapper for `build.vbs` (drag-and-drop friendly). |
 | `mac_build.sh` | Mac dev helper: open + run macro + save via AppleScript. |
@@ -35,15 +42,19 @@ raw GP file ──► Python app (parse + map, unchanged)
 The four `.bas` files are the version-controlled source; the assembled
 `TR-Analyzer.xlsm` itself stays out of git (`*.xlsm` is ignored).
 
-Not yet ported: Return Dispersion, Portfolio Construction, Vintage Perf by
-Sector, Deployment & Exits, charts, TOC, exact template styling.
+**All 8 output tabs are ported** (TOC, Deal Level Inputs consumed as input,
+Deal List, Return & Loss Ratios, Return Dispersion, Portfolio Construction,
+Vintage Perf by Sector, Deployment & Exits), including charts. Not ported:
+pixel-exact template styling (fills, column widths, exact chart palettes) —
+functional parity first; polish after the Windows validation run.
 
 ## Assembling the .xlsm (Windows, one-time)
 
 1. Open Excel → blank workbook → save as `TR-Analyzer.xlsm`
    (macro-enabled). Keep it **outside** git — `*.xlsm` is ignored; the
    `.bas` files here are the version-controlled source.
-2. `Alt+F11` → File → Import File… → import the four `.bas` files.
+2. `Alt+F11` → File → Import File… → import **all** `.bas` files in this
+   folder (11 modules — `modSpec` must be among them).
 3. Paste a Python-generated **Deal Level Inputs** sheet into the workbook
    (Move/Copy from any generated output, or paste values; keep the sheet
    name and the meta cells C3:C5).
@@ -87,10 +98,11 @@ Two preconditions on Windows:
 
 ## Known gaps / notes
 
-- Calculated fields can't express *impaired-only* variants per pivot the way
-  the Python cache does for every tab — fine for RLR, revisit per-tab.
-- Native PivotCharts change when a pivot is filtered; the Python version
-  ships static-snapshot charts by design. If the "charts never change" rule
-  must hold, charts should be built from a hidden staging range instead.
+- Charts follow the "never change with filters" rule via the `_ChartData`
+  snapshot mechanism (see `modCharts.bas`) — rebuilding refreshes them.
+- Written blind on a Mac: expect the first Windows run to surface small
+  object-model issues (chart constants, GetPivotData caption matching).
+  Each tab is error-isolated, so the final dialog lists exactly which tab
+  failed and why — send that text back for fixes.
 - Mac Excel can import and *run* these modules, but validate on Windows —
   that's the deployment target.

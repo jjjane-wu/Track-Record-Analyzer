@@ -15,7 +15,8 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "app"))
 
 from deal_list_spec import DL_COLS, DL_FORMATS, HEADER_BLOCK, TAG_ROW   # noqa: E402
-from build_output import INPUT_COLS, PIVOT_SPECS, _PAGE_FIELD_HEADERS  # noqa: E402
+from build_output import (INPUT_COLS, PIVOT_SPECS, _PAGE_FIELD_HEADERS,  # noqa: E402
+                          _CANONICAL_ORDER)
 
 
 def vstr(s: str) -> str:
@@ -107,6 +108,21 @@ w(f"    ReDim p(1 To {len(_PAGE_FIELD_HEADERS)})")
 for i, ph in enumerate(_PAGE_FIELD_HEADERS):
     w(f"    p({i + 1}) = {vstr(ph)}")
 w("End Sub")
+w("")
+
+# -- canonical item order for bucket-type axis fields ---------------------
+w("' Canonical display order for bucket axes (native pivots would otherwise")
+w("' sort alphabetically). Returns Empty when the field has no fixed order.")
+w("Public Function CanonicalOrder(ByVal fieldName As String) As Variant")
+w("    Select Case fieldName")
+for hdr, labels in _CANONICAL_ORDER.items():
+    w(f"        Case {vstr(hdr)}")
+    parts = ", ".join(vstr(l) for l in labels)
+    w(f"            CanonicalOrder = Array({parts})")
+w("        Case Else")
+w("            CanonicalOrder = Empty")
+w("    End Select")
+w("End Function")
 
 out = ROOT / "vba" / "modSpec.bas"
 out.write_text("\r\n".join(lines) + "\r\n", encoding="ascii")
