@@ -13,12 +13,22 @@ Public Const DL_DATA_ROW As Long = 14         ' first data row
 Public Const IN_DATA_ROW As Long = 7          ' first input data row (headers row 6)
 Public Const FIRST_COL As Long = 2            ' both tables start at column B
 
-' number of deals = filled Company cells on the inputs sheet
+' Number of deal rows on the inputs sheet. A row counts while ANY of the
+' 28 input columns holds a value -- a deal with a blank Company (possible
+' after imperfect parses) must not truncate the rows that follow it.
 Public Function DealCount() As Long
-    Dim ws As Worksheet, r As Long
+    Dim ws As Worksheet, r As Long, c As Long, has As Boolean
     Set ws = ThisWorkbook.Worksheets("Deal Level Inputs")
     r = IN_DATA_ROW
-    Do While Len(Trim$(CStr(ws.Cells(r, FIRST_COL).Value))) > 0
+    Do
+        has = False
+        For c = FIRST_COL To FIRST_COL + modSpec.IN_NCOLS - 1
+            If Len(Trim$(CStr(ws.Cells(r, c).Value))) > 0 Then
+                has = True
+                Exit For
+            End If
+        Next c
+        If Not has Then Exit Do
         r = r + 1
     Loop
     DealCount = r - IN_DATA_ROW

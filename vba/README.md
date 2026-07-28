@@ -38,6 +38,7 @@ raw GP file ──► Python app (parse + map, unchanged)
 | `build.vbs` | Windows COM driver: opens the template invisibly, injects the inputs sheet, runs the macro, saves a macro-free `.xlsx`, exits nonzero on failure. |
 | `build.bat` | One-command wrapper for `build.vbs` (drag-and-drop friendly). |
 | `mac_build.sh` | Mac dev helper: open + run macro + save via AppleScript. |
+| `pipeline.bat` | The team's one command: raw GP file → `headless.py` parse → `build.vbs` → finished analysis (see above). |
 
 The four `.bas` files are the version-controlled source; the assembled
 `TR-Analyzer.xlsm` itself stays out of git (`*.xlsm` is ignored).
@@ -59,6 +60,24 @@ functional parity first; polish after the Windows validation run.
    (Move/Copy from any generated output, or paste values; keep the sheet
    name and the meta cells C3:C5).
 4. `Alt+F8` → run `BuildAnalysisWorkbook`.
+
+## The team pipeline — one command, raw file to finished analysis
+
+Analysts never open the VBE: the module import below is a **one-time step
+for whoever assembles the template**; the team receives the finished
+`TR-Analyzer.xlsm`. Their whole workflow is then:
+
+```bat
+pipeline.bat "<raw GP track record>.xlsx"
+```
+
+(or drag the raw file onto `pipeline.bat`) — step 1 runs the Python parser
+headless (`app/headless.py`: full pipeline, auto-accepted mapping, prints
+the mapping summary), step 2 injects the inputs into the template and runs
+the VBA build, saving `<raw> - Analysis.xlsx`. If step 1 prints
+NEEDS-REVIEW / UNMAPPED fields, that GP deserves a pass through the
+Streamlit app instead, where the mapping can be corrected by hand — the
+pipeline is the happy path, the app is the judgment path.
 
 ## Scripted / batch runs (no clicking)
 
