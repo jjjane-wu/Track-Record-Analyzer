@@ -155,4 +155,43 @@ Public Sub BuildDealList()
                      ws.Cells(lastRow, FIRST_COL + i - 1)).NumberFormat = fmt(i)
         End If
     Next i
+
+    ' -- readability styling (mirrors the Python build's conventions) --
+    Dim hdr As Range, body As Range
+    Set hdr = ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), _
+                       ws.Cells(DL_HDR_ROW, FIRST_COL + modSpec.DL_NCOLS - 1))
+    hdr.Interior.Color = RGB(31, 78, 120)         ' dark blue banner
+    hdr.Font.Color = RGB(255, 255, 255)
+    hdr.Font.Bold = True
+    hdr.WrapText = True
+    hdr.VerticalAlignment = xlVAlignCenter
+
+    Set body = ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), _
+                        ws.Cells(lastRow, FIRST_COL + modSpec.DL_NCOLS - 1))
+    With body.Borders
+        .LineStyle = xlContinuous
+        .Weight = xlThin
+        .Color = RGB(208, 208, 208)               ' light grid
+    End With
+
+    ' five key computed columns get the template's light-grey fill
+    For i = 1 To modSpec.DL_NCOLS
+        If h(i) = "Total" & Chr(10) & "Value" _
+           Or h(i) = "Gross" & Chr(10) & "MOIC" _
+           Or h(i) = "Performing" & Chr(10) & "(1=Underperform)" _
+           Or h(i) = "InvCapital in Loss Position" _
+           Or h(i) = "Impaired" & Chr(10) & "Value" Then
+            ws.Range(ws.Cells(DL_DATA_ROW, FIRST_COL + i - 1), _
+                     ws.Cells(lastRow, FIRST_COL + i - 1)).Interior.Color = RGB(242, 242, 242)
+        End If
+    Next i
+
+    ' widths + frozen header row / company column
+    ws.Columns(2).ColumnWidth = 26                ' Company
+    ws.Range(ws.Columns(3), ws.Columns(FIRST_COL + modSpec.DL_NCOLS - 1)).ColumnWidth = 13
+    On Error Resume Next                          ' needs a visible window
+    ws.Activate
+    ws.Range("C" & DL_DATA_ROW).Select
+    ActiveWindow.FreezePanes = True
+    On Error GoTo 0
 End Sub
