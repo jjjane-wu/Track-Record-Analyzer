@@ -42,6 +42,30 @@ Sector, Deployment & Exits, charts, TOC, exact template styling.
    name and the meta cells C3:C5).
 4. `Alt+F8` → run `BuildAnalysisWorkbook`.
 
+## Scripted / batch runs (no clicking)
+
+Yes — the whole build can run from one command. `build.vbs` drives Excel
+through COM: opens the template invisibly, injects the "Deal Level Inputs"
+sheet from any workbook, runs the macro, saves a plain `.xlsx` (macros
+stripped), and exits with a proper error code.
+
+```bat
+build.bat "[23-Jul-26 - GP_2] - Segmented Track Record Analysis Output.xlsx"
+```
+
+…or drag an inputs workbook onto `build.bat`. Output lands next to the
+input as `… - Analysis.xlsx`. On the Mac dev machine, `mac_build.sh`
+does the open-run-save loop via AppleScript.
+
+Two preconditions on Windows:
+
+1. **Trusted Location** (one-time): add the folder holding
+   `TR-Analyzer.xlsm` to File → Options → Trust Center → Trusted
+   Locations — otherwise Excel silently disables macros for
+   automation-opened files and the script fails.
+2. `cscript.exe` must be allowed by corporate policy (AppLocker sometimes
+   blocks it; the same COM calls can be ported to PowerShell if so).
+
 ## What to validate on a UNOIM laptop (the real questions)
 
 1. **Does the macro run at all?** Files downloaded from the internet carry
