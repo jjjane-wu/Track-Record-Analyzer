@@ -107,20 +107,7 @@ Public Sub BuildDealList()
     ws.Range("C5").NumberFormat = "d-mmm-yy"
     ws.Range("B6").Value = "Currency:":    ws.Range("C6").Formula = "='Deal Level Inputs'!C5"
 
-    ' -- header block (bucket thresholds, counters; {LAST} = last row) --
-    modSpec.LoadHeaderBlock refs, vals, isNum, numv
     Dim lastRow As Long: lastRow = DL_DATA_ROW + n - 1
-    For i = LBound(refs) To UBound(refs)
-        If isNum(i) Then
-            ws.Range(refs(i)).Value = numv(i)
-            ws.Range(refs(i)).Font.Color = RGB(0, 0, 255)          ' editable threshold
-            ws.Range(refs(i)).Interior.Color = RGB(222, 235, 247)  ' light blue
-        ElseIf Left$(vals(i), 1) = "=" Then
-            ws.Range(refs(i)).Formula = Replace(vals(i), "{LAST}", CStr(lastRow))
-        Else
-            ws.Range(refs(i)).Value = vals(i)
-        End If
-    Next i
 
     ' -- tag row 12 + header row 13 -----------------------------------
     For i = 1 To modSpec.DL_NCOLS
@@ -136,6 +123,22 @@ Public Sub BuildDealList()
         ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), ws.Cells(lastRow, FIRST_COL + modSpec.DL_NCOLS - 1)), , xlYes)
     tbl.name = "DealLevelInput"
     tbl.TableStyle = ""
+
+    ' -- header block AFTER the table exists: its formulas reference the
+    '    DealLevelInput table and .Formula parses references immediately
+    '    (the Python XML writer does not care about order; VBA does)
+    modSpec.LoadHeaderBlock refs, vals, isNum, numv
+    For i = LBound(refs) To UBound(refs)
+        If isNum(i) Then
+            ws.Range(refs(i)).Value = numv(i)
+            ws.Range(refs(i)).Font.Color = RGB(0, 0, 255)          ' editable threshold
+            ws.Range(refs(i)).Interior.Color = RGB(222, 235, 247)  ' light blue
+        ElseIf Left$(vals(i), 1) = "=" Then
+            ws.Range(refs(i)).Formula = Replace(vals(i), "{LAST}", CStr(lastRow))
+        Else
+            ws.Range(refs(i)).Value = vals(i)
+        End If
+    Next i
 
     Dim colFormulas() As Variant
     For i = 1 To modSpec.DL_NCOLS

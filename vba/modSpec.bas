@@ -43,7 +43,7 @@ Public Sub LoadDealListSpec(h() As String, f() As String, fmt() As String, tag()
     fmt(8) = "####"
     tag(8) = "Formula"
     h(9) = "Hold" & Chr(10) & "Period"
-    f(9) = "F:IF((DealLevelInput[[#This Row],[Exit Date]]=""""),""n/a"",IF(ISNUMBER(H{r}),H{r}-G{r},#REF!-G{r})/365)"
+    f(9) = "F:IF((DealLevelInput[[#This Row],[Exit Date]]=""""),""n/a"",IF(ISNUMBER(H{r}),H{r}-G{r},NA()-G{r})/365)"
     fmt(9) = "0.0\ ""years"""
     tag(9) = "Formula"
     h(10) = "Hold Period Buckets"

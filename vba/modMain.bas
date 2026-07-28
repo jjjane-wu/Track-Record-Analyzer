@@ -42,7 +42,6 @@ End Sub
 Private Function BuildCore() As String
     Dim problems As String
     Application.ScreenUpdating = False
-    Application.Calculation = xlCalculationManual
     On Error GoTo hardFail
 
     If Not SheetExists("Deal Level Inputs") Then
@@ -69,14 +68,12 @@ Private Function BuildCore() As String
     ThisWorkbook.Worksheets("_ChartData").Visible = xlSheetHidden
     On Error GoTo hardFail
 
-    Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
     BuildCore = problems
     Exit Function
 hardFail:
     Dim n As Long, d As String
     n = Err.Number: d = Err.Description
-    Application.Calculation = xlCalculationAutomatic
     Application.ScreenUpdating = True
     Err.Raise n, , d
 End Function

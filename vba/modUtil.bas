@@ -89,11 +89,11 @@ End Sub
 ' Hide the "(blank)" item of an axis field (the Python build's rule:
 ' unlabelled deals are hidden from the pivot and its totals).
 Public Sub HideBlank(pt As PivotTable, ByVal fieldName As String)
-    Dim pi As PivotItem
+    ' Mac Excel's PivotItems enumeration SKIPS the blank item, so a For Each
+    ' never sees it -- but indexing it by name works. Try both spellings.
     On Error Resume Next
-    For Each pi In pt.PivotFields(fieldName).PivotItems
-        If pi.Name = "(blank)" Then pi.Visible = False
-    Next pi
+    pt.PivotFields(fieldName).PivotItems("(blank)").Visible = False
+    pt.PivotFields(fieldName).PivotItems("").Visible = False
     On Error GoTo 0
 End Sub
 

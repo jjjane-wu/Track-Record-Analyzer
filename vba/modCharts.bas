@@ -10,17 +10,17 @@ Attribute VB_Name = "modCharts"
 ' ===================================================================
 Option Explicit
 
-Private Const STAGE As String = "_ChartData"
+Private Const STAGE_NAME As String = "_ChartData"
 
 Public Function StageSheet() As Worksheet
     Dim ws As Worksheet
     On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(STAGE)
+    Set ws = ThisWorkbook.Worksheets(STAGE_NAME)
     On Error GoTo 0
     If ws Is Nothing Then
         Set ws = ThisWorkbook.Worksheets.Add( _
             After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
-        ws.Name = STAGE
+        ws.Name = STAGE_NAME
     End If
     Set StageSheet = ws
 End Function
@@ -28,7 +28,7 @@ End Function
 Public Sub ResetStage()
     Dim ws As Worksheet
     On Error Resume Next
-    Set ws = ThisWorkbook.Worksheets(STAGE)
+    Set ws = ThisWorkbook.Worksheets(STAGE_NAME)
     On Error GoTo 0
     If Not ws Is Nothing Then ws.Cells.Clear
 End Sub
