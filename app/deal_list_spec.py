@@ -29,7 +29,7 @@ DL_COLS: list[tuple[str, str, int, str]] = [
     ('Exit Date', 'in:Exit Date', 7, 'dt'),
     ('Exit Year', 'FT:IF((DealLevelInput[[#This Row],[Exit Date]]=""),"n/a",YEAR(DealLevelInput[[#This Row],[Exit Date]]))', 8, 'gn'),
     ('Hold\nPeriod', 'F:IF((DealLevelInput[[#This Row],[Exit Date]]=""),"n/a",IF(ISNUMBER(H{r}),H{r}-G{r},NA()-G{r})/365)', 9, 'n'),
-    ('Hold Period Buckets', 'FT:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$7,$K$7,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$8,$K$8,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$9,$K$9,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$10,$K$10,$K$11)))))', 10, 'g'),
+    ('Hold Period Buckets', 'FT:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",IF(DealLevelInput[[#This Row],[Hold\nPeriod]]="n/a","n/a",IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$7,$K$7,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$8,$K$8,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$9,$K$9,IF(DealLevelInput[[#This Row],[Hold\nPeriod]]<$J$10,$K$10,$K$11))))))', 10, 'g'),
     ('Sector', 'in:Sector', 11, 'g'),
     ('Geography', 'in:Geography', 12, 'g'),
     ('Total IC mlns for Buckets', 'FT:IF((DealLevelInput[[#This Row],[Total Invested Capital (mlns)]]=""),0,DealLevelInput[[#This Row],[Total Invested Capital (mlns)]])', 14, 'n'),

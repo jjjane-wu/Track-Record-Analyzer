@@ -50,10 +50,13 @@ End Sub
 Public Sub MetaBlock(ws As Worksheet, ByVal title As String)
     ws.Range("B2").Value = title
     ws.Range("B2").Font.Bold = True: ws.Range("B2").Font.Size = 16
-    ws.Range("B4").Value = "Sponsor/GP:": ws.Range("C4").Formula = "='Deal List'!$C$4"
-    ws.Range("B5").Value = "As of Date:": ws.Range("C5").Formula = "='Deal List'!$C$5"
+    ' link straight to Deal Level Inputs: that sheet is never rebuilt, so
+    ' the references survive a Deal List rebuild (via 'Deal List' they
+    ' turned into #REF! whenever it was deleted and recreated)
+    ws.Range("B4").Value = "Sponsor/GP:": ws.Range("C4").Formula = "='Deal Level Inputs'!$C$3"
+    ws.Range("B5").Value = "As of Date:": ws.Range("C5").Formula = "='Deal Level Inputs'!$C$4"
     ws.Range("C5").NumberFormat = "d-mmm-yy"
-    ws.Range("B6").Value = "Currency:":   ws.Range("C6").Formula = "='Deal List'!$C$6"
+    ws.Range("B6").Value = "Currency:":   ws.Range("C6").Formula = "='Deal Level Inputs'!$C$5"
 End Sub
 
 Public Sub SectionTitle(ws As Worksheet, ByVal r As Long, ByVal c As Long, _

@@ -77,7 +77,11 @@ Private Function ResolveSpec(ByVal spec As String, ByVal r As Long) As String
 End Function
 
 Public Function FreshSheet(ByVal name As String) As Worksheet
-    Dim ws As Worksheet
+    Dim ws As Worksheet, pos As Long
+    pos = 0
+    On Error Resume Next
+    pos = ThisWorkbook.Worksheets(name).Index
+    On Error GoTo 0
     Application.DisplayAlerts = False
     On Error Resume Next
     ThisWorkbook.Worksheets(name).Delete
@@ -85,6 +89,9 @@ Public Function FreshSheet(ByVal name As String) As Worksheet
     Application.DisplayAlerts = True
     Set ws = ThisWorkbook.Worksheets.Add(After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count))
     ws.name = name
+    If pos > 0 And pos <= ThisWorkbook.Worksheets.Count Then
+        ws.Move Before:=ThisWorkbook.Worksheets(pos)   ' keep original position
+    End If
     Set FreshSheet = ws
 End Function
 

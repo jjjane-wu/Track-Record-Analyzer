@@ -235,6 +235,9 @@ EBITDA_MARGIN_LABELS     = ["<=20%", "20% - 30%", "30% - 40%", "40% - 50%", ">=5
 
 
 def hp_bucket(hp: float | None) -> str:
+    # matches the sheet formula's n/a guard: no hold period -> "n/a" bucket
+    if hp is None:
+        return "n/a"
     return _bucket(hp, HP_THRESHOLDS, HP_LABELS)
 
 def ic_bucket(ic: float | None) -> str:

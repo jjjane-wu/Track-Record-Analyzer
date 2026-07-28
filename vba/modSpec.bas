@@ -47,7 +47,7 @@ Public Sub LoadDealListSpec(h() As String, f() As String, fmt() As String, tag()
     fmt(9) = "0.0\ ""years"""
     tag(9) = "Formula"
     h(10) = "Hold Period Buckets"
-    f(10) = "FT:IF((DealLevelInput[[#This Row],[Inv. Date]]=""""),""n/a"",IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$7,$K$7,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$8,$K$8,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$9,$K$9,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$10,$K$10,$K$11)))))"
+    f(10) = "FT:IF((DealLevelInput[[#This Row],[Inv. Date]]=""""),""n/a"",IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]=""n/a"",""n/a"",IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$7,$K$7,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$8,$K$8,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$9,$K$9,IF(DealLevelInput[[#This Row],[Hold" & Chr(10) & "Period]]<$J$10,$K$10,$K$11))))))"
     fmt(10) = "0.0\ ""years"""
     tag(10) = "Formula"
     h(11) = "Sector"
