@@ -95,6 +95,22 @@ Public Function FreshSheet(ByVal name As String) As Worksheet
     Set FreshSheet = ws
 End Function
 
+' Deal Level Inputs: every typed-in cell gets the classic light-blue
+' fill + blue font (the sheet arrives via copy/inject; theme-based fills
+' can degrade across workbooks, so restate them explicitly).
+Public Sub StyleInputs()
+    Dim ws As Worksheet, n As Long, rng As Range
+    Set ws = ThisWorkbook.Worksheets("Deal Level Inputs")
+    n = DealCount()
+    If n = 0 Then Exit Sub
+    Set rng = ws.Range(ws.Cells(IN_DATA_ROW, FIRST_COL), _
+                       ws.Cells(IN_DATA_ROW + n - 1, FIRST_COL + modSpec.IN_NCOLS - 1))
+    rng.Interior.Color = RGB(222, 235, 247)
+    rng.Font.Color = RGB(0, 0, 255)
+    ws.Range("C3:C5").Interior.Color = RGB(222, 235, 247)   ' GP / date / ccy
+    ws.Range("C3:C5").Font.Color = RGB(0, 0, 255)
+End Sub
+
 Public Sub BuildDealList()
     Dim ws As Worksheet, n As Long, i As Long, r As Long
     Dim h() As String, f() As String, fmt() As String, tag() As String
@@ -102,6 +118,7 @@ Public Sub BuildDealList()
 
     n = DealCount()
     If n = 0 Then Err.Raise vbObjectError + 2, , "No deals found on 'Deal Level Inputs'"
+    StyleInputs
     modSpec.LoadDealListSpec h, f, fmt, tag
 
     Set ws = FreshSheet("Deal List")

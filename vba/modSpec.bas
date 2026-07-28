@@ -333,7 +333,7 @@ Public Sub LoadHeaderBlock(refs() As String, vals() As String, isNum() As Boolea
     refs(20) = "K10"
     vals(20) = "=CONCATENATE(TEXT(J9,""0""),"" yrs  - "",TEXT(J10,""0""),"" yrs"")"
     refs(21) = "J11"
-    isNum(21) = True: numv(21) = 8
+    vals(21) = "=J10"
     refs(22) = "K11"
     vals(22) = "=CONCATENATE("">="",TEXT(J11,""0""),"" yrs"")"
     refs(23) = "N6"
@@ -381,7 +381,7 @@ Public Sub LoadHeaderBlock(refs() As String, vals() As String, isNum() As Boolea
     refs(44) = "U11"
     vals(44) = "=CONCATENATE(TEXT(T10,""0.0x""),"" - "",TEXT(T11,""0.0x""))"
     refs(45) = "T12"
-    isNum(45) = True: numv(45) = 3
+    vals(45) = "=T11"
     refs(46) = "U12"
     vals(46) = "=CONCATENATE("">="",TEXT(T12,""0.0x""))"
     refs(47) = "Z3"
