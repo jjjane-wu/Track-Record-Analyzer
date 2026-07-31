@@ -80,12 +80,9 @@ def main() -> int:
         print("ERROR: no deals survived parsing — use the Streamlit app to inspect.")
         return 1
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Deal Level Inputs"
-    bo._write_inputs(ws, included, gp, "USD",
-                     getattr(res.profile, "report_date", None) or date.today())
-    wb.save(out)
+    out.write_bytes(bo.build_inputs_workbook(
+        included, gp, currency="USD",
+        track_record_date=getattr(res.profile, "report_date", None) or date.today()))
 
     # ── mapping summary (the analyst's visibility into the auto decisions) ──
     print(f"OK: {out}")

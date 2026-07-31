@@ -79,6 +79,20 @@ NEEDS-REVIEW / UNMAPPED fields, that GP deserves a pass through the
 Streamlit app instead, where the mapping can be corrected by hand — the
 pipeline is the happy path, the app is the judgment path.
 
+## The hybrid flow in practice
+
+Two ways to feed this template:
+
+1. **Via the Streamlit app** (mapping reviewed by a human): parse the raw
+   GP file in the app as usual; on Screen 3 click **"Download Deal Level
+   Input (for the VBA analyzer)"** — that's the hand-off file. Then in
+   `TR-Analyzer.xlsm` run the **`ImportInputsAndBuild`** macro (Alt+F8):
+   pick the downloaded file, and all 8 tabs rebuild from it.
+2. **Fully scripted** (auto-accepted mapping): `pipeline.bat <raw.xlsx>`
+   on Windows, or `python3 app/headless.py <raw.xlsx> -o inputs.xlsx`
+   plus the `ReplaceInputs` / `BuildHeadless` macros anywhere. headless
+   prints NEEDS-REVIEW mappings — if any appear, prefer route 1.
+
 ## Scripted / batch runs (no clicking)
 
 Yes — the whole build can run from one command. `build.vbs` drives Excel
