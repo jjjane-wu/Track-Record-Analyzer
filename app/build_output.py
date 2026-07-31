@@ -3074,6 +3074,25 @@ def _inject_pivots(wb_bytes: bytes, records: list[dict], plan: list[dict],
 # Public API
 # ═══════════════════════════════════════════════════════════════════════════════
 
+def build_inputs_workbook(records: list[dict], gp_name: str,
+                          currency: str = "USD",
+                          track_record_date: date | None = None) -> bytes:
+    """Standalone "Gross Deal Level Input" workbook: just the Deal Level
+    Inputs sheet, ready to be imported into the VBA analyzer template."""
+    for rec in records:                        # same EWL defaults as build_output
+        if not _cell_str(rec.get(90)):
+            rec[90] = currency
+        if _cell_num(rec.get(17)) is None:
+            rec[17] = 0.0
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deal Level Inputs"
+    _write_inputs(ws, records, gp_name, currency, track_record_date)
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def build_output(records: list[dict], gp_name: str, currency: str = "USD",
                  phase_errors: list | None = None,
                  track_record_date: date | None = None) -> bytes:
