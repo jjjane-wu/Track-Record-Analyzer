@@ -75,24 +75,26 @@ themselves diligence information.
 Two minutes here is the whole job — a wrong mapping is the one mistake that
 flows through everything. Click **Generate Analysis →**.
 
-### Screen 3 — Generate & Download
+### Screen 3 — Download the Deal Level Input
 
-The tool builds the workbook. What you see:
+The tool builds the hand-off file. What you see:
 
-- **Summary metrics** — GP_2: 90 deals, 38 realized.
+- **Summary metrics** — GP_2: 90 deals, 38 realized, 6 funds.
 - **Unit conversion notice** — appears only when the tool had to rescale:
   GP_2 already reports in millions, so nothing shows; upload a GP reporting
   in thousands or absolute dollars and a banner lists exactly which columns
   were converted.
-- **⬇️ Download Populated Template** — click to save the finished workbook,
-  named `[13-Jul-26 - GP_2] - Segmented Track Record Analysis Output.xlsx`
-  (the date is the day you run it). A backup copy is also kept
-  automatically.
+- **⬇️ Download Deal Level Input** — saves
+  `[13-Jul-26 - GP_2] - Gross Deal Level Input.xlsx` (the date is the day
+  you run it). A backup copy is kept automatically.
+- **Step-by-step instructions** for the final step: open
+  **TR-Analyzer.xlsm**, run the **`ImportInputsAndBuild`** macro (Opt+F8 /
+  Alt+F8), pick the downloaded file — it rebuilds all 8 analysis tabs.
 - A **mapping log** and an **error log** at the bottom, for the record.
 
-Something looks off in the output? Click **← Back**, fix the mapping,
-regenerate — it takes seconds. Never hand-patch the output file: fix the
-mapping instead, so any regenerated copy comes out right.
+Something looks off? Click **← Back**, fix the mapping, download again,
+re-run the macro — it takes seconds. Never hand-patch the analysis
+workbook's data: fix the mapping instead.
 
 ---
 

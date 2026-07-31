@@ -40,7 +40,7 @@ from transformer import (
     transform_row, compute_fund_vintages,
     flag_excluded_deals, normalise_status, detect_monetary_scale,
 )
-from build_output import build_output, build_inputs_workbook
+from build_output import build_inputs_workbook
 from pipeline import GPParserPipeline, PipelineResult
 from inferencer import CONFIDENCE_AUTO, CONFIDENCE_REVIEW
 
@@ -646,30 +646,32 @@ elif st.session_state.screen == 3:
             "tier":        tier,
         })
 
-    # ── Phase 4: Build the output workbook from scratch ──────────────
-    # Clean 3-tab workbook (Deal Level Inputs → Deal List → Return & Loss
-    # Ratios with a real pivot table); no heavy template, no external links.
-    output_bytes = None
-    with st.spinner("Building output workbook…"):
-        output_bytes = build_output(
-            records      = included_records,
-            gp_name      = gp,
-            currency     = meta.get("currency", "USD"),
-            phase_errors = phase_errors,
-            # Track Record Date = as-of date reported in the GP file;
-            # the "Data as of" column + output filename use TODAY instead.
-            track_record_date = report_date,
-        )
+    # ── Phase 4: Build the Deal Level Input workbook ──────────────────
+    # The hand-off file for the VBA analyzer: TR-Analyzer.xlsm imports it
+    # and builds the analysis tabs. (The all-Python output builder still
+    # lives in build_output.py; it is no longer wired into this screen.)
+    gp_clean = re.sub(r"[\\/:*?\"<>|]", "-", (gp or "GP")).strip() or "GP"
+    date_tag = date.today().strftime("%d-%b-%y")
+    inputs_name = f"[{date_tag} - {gp_clean}] - Gross Deal Level Input.xlsx"
 
-    # ── Summary stats ────────────────────────────────────────────────
-    write_errors = [e for e in phase_errors if e["phase"] in
-                    ("Build workbook", "Pivot injection")]
-    if output_bytes and not write_errors:
-        st.success("✅ Output workbook built successfully (Deal Level Inputs · Deal List · Return & Loss Ratios).")
-    elif output_bytes:
-        st.warning(f"⚠️ Workbook built with {len(write_errors)} issue(s) — see error log below.")
+    inputs_bytes = None
+    with st.spinner("Building the Deal Level Input workbook…"):
+        try:
+            inputs_bytes = build_inputs_workbook(
+                included_records, gp,
+                currency=meta.get("currency", "USD"),
+                # Track Record Date = as-of date reported in the GP file;
+                # the filename uses TODAY (processing date) instead.
+                track_record_date=report_date,
+            )
+        except Exception as e:
+            phase_errors.append({"phase": "Inputs workbook", "detail": str(e), "row": ""})
+
+    if inputs_bytes:
+        st.success(f"✅ Deal Level Input built — {len(included_records)} deals, "
+                   "ready for the VBA analyzer.")
     else:
-        st.error("❌ Could not produce output. Check the error log.")
+        st.error("❌ Could not build the Deal Level Input file. See the error log below.")
 
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Total Deals",  len(included_records))
@@ -677,46 +679,33 @@ elif st.session_state.screen == 3:
     c3.metric("Excluded",     len(excluded_records))
     c4.metric("Funds",        len(selected_funds))
 
-    # ── Download ─────────────────────────────────────────────────────
-    # Naming convention "[dd-mmm-yy - GP Name] - …"; the date is TODAY (when
-    # this processing runs), not the report/as-of date in the file.
-    gp_clean = re.sub(r"[\\/:*?\"<>|]", "-", (gp or "GP")).strip() or "GP"
-    date_tag = date.today().strftime("%d-%b-%y")
-    filename = f"[{date_tag} - {gp_clean}] - Segmented Track Record Analysis Output.xlsx"
-
-    if output_bytes:
+    if inputs_bytes:
         st.download_button(
-            label     = "⬇️ Download Populated Template",
-            data      = output_bytes,
-            file_name = filename,
+            label     = "⬇️ Download Deal Level Input",
+            data      = inputs_bytes,
+            file_name = inputs_name,
             mime      = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             type      = "primary",
         )
         try:
-            out_path = OUTPUTS_DIR / filename
-            out_path.write_bytes(output_bytes)
-            st.caption(f"Also saved to: `{out_path}`")
+            out_path = OUTPUTS_DIR / inputs_name
+            out_path.write_bytes(inputs_bytes)
+            st.caption(f"A copy was saved to: `{out_path}`")
         except Exception as e:
             phase_errors.append({"phase": "Save to disk", "detail": str(e), "row": ""})
 
-    # Inputs-only workbook — the hand-off file for the VBA analyzer
-    # (import it into TR-Analyzer.xlsm via the ImportInputsAndBuild macro).
-    try:
-        inputs_bytes = build_inputs_workbook(
-            included_records, gp,
-            currency=meta.get("currency", "USD"),
-            track_record_date=report_date,
+        st.markdown("#### Next: build the analysis in TR-Analyzer.xlsm")
+        st.markdown(
+            "1. Open **TR-Analyzer.xlsm** (click *Enable Macros* if prompted).\n"
+            "2. Press **Opt+F8** on Mac / **Alt+F8** on Windows "
+            "(or Tools → Macro → Macros…).\n"
+            "3. Run **`ImportInputsAndBuild`** and pick the file you just "
+            "downloaded.\n"
+            "4. It swaps in the new Deal Level Inputs sheet and rebuilds all "
+            "8 analysis tabs; a confirmation dialog appears when done.\n\n"
+            "*Processing another GP later? Just run the macro again with the "
+            "new file — everything rebuilds, nothing to clean up first.*"
         )
-        st.download_button(
-            label     = "⬇️ Download Deal Level Input (for the VBA analyzer)",
-            data      = inputs_bytes,
-            file_name = f"[{date_tag} - {gp_clean}] - Gross Deal Level Input.xlsx",
-            mime      = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        )
-    except Exception as e:
-        phase_errors.append({"phase": "Inputs workbook", "detail": str(e), "row": ""})
-    else:
-        st.error("Could not produce any output file. See error log below.")
 
     # ── Mapping log preview ──────────────────────────────────────────
     st.subheader("Mapping Log")
