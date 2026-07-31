@@ -40,7 +40,7 @@ from transformer import (
     transform_row, compute_fund_vintages,
     flag_excluded_deals, normalise_status, detect_monetary_scale,
 )
-from build_output import build_output
+from build_output import build_output, build_inputs_workbook
 from pipeline import GPParserPipeline, PipelineResult
 from inferencer import CONFIDENCE_AUTO, CONFIDENCE_REVIEW
 
@@ -698,6 +698,23 @@ elif st.session_state.screen == 3:
             st.caption(f"Also saved to: `{out_path}`")
         except Exception as e:
             phase_errors.append({"phase": "Save to disk", "detail": str(e), "row": ""})
+
+    # Inputs-only workbook — the hand-off file for the VBA analyzer
+    # (import it into TR-Analyzer.xlsm via the ImportInputsAndBuild macro).
+    try:
+        inputs_bytes = build_inputs_workbook(
+            included_records, gp,
+            currency=meta.get("currency", "USD"),
+            track_record_date=report_date,
+        )
+        st.download_button(
+            label     = "⬇️ Download Deal Level Input (for the VBA analyzer)",
+            data      = inputs_bytes,
+            file_name = f"[{date_tag} - {gp_clean}] - Gross Deal Level Input.xlsx",
+            mime      = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        )
+    except Exception as e:
+        phase_errors.append({"phase": "Inputs workbook", "detail": str(e), "row": ""})
     else:
         st.error("Could not produce any output file. See error log below.")
 
