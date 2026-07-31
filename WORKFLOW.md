@@ -58,19 +58,20 @@ The panel also shows **signal explanations** (why each mapping was chosen),
 The user can correct any mapping manually before proceeding — the corrected
 mapping is what drives generation.
 
-### Screen 3 — Generate & Download
+### Screen 3 — Download the Deal Level Input
 
-- Transforms the selected funds' rows into standardised deal records
+- Transforms all funds' rows into standardised deal records
   (all deals are included — the excluded-deals logic is disabled by design)
 - Shows a **unit normalisation** notice when monetary columns were rescaled
   to millions (e.g. a GP reporting absolute dollars or thousands)
-- Builds the output workbook from a blank file and offers it for download as
-  `[dd-mmm-yy - GP Name] - Segmented Track Record Analysis Output.xlsx`
-  (date = processing day; the square brackets are real — Excel's title bar
-  merely displays them as parentheses)
-- Saves a copy to `outputs/` (the cross-GP CSV database append is
-  currently disabled — parsed data isn't considered clean enough to
-  accumulate yet; `csv_writer.py` remains available to re-enable later)
+- Builds the **inputs-only workbook** (`build_inputs_workbook`) and offers
+  it as `[dd-mmm-yy - GP Name] - Gross Deal Level Input.xlsx`
+  (date = processing day; square brackets are real — Excel's title bar just
+  shows them as parentheses); a copy is saved to `outputs/`
+- Shows in-page instructions for the second half of the hybrid flow:
+  TR-Analyzer.xlsm → `ImportInputsAndBuild` macro → 8 analysis tabs
+- The all-Python 8-tab builder (`build_output`) still exists and is used by
+  tests/reference runs, but is no longer wired into the UI
 - Shows summary metrics, the full mapping log, and an error log if any
   phase failed
 
