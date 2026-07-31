@@ -41,10 +41,10 @@ leaves it, and no external services are involved.
      deals across one tab per fund, you'll see the tabs it plans to combine,
      with controls to adjust if it guessed wrong. Usually you touch nothing
      here.
-3. Click **Parse File →**. A few seconds later, **Select Funds to Include**
-   appears — for GP_2: Fund VIII, IX, X, XI, XII, VBP I, all ticked by
-   default. Untick any fund you want left out of the analysis (e.g. a
-   predecessor strategy that isn't relevant to the mandate under review).
+3. Click **Parse File →**. A few seconds later the app lists the funds it
+   detected — for GP_2: Fund VIII, IX, X, XI, XII, VBP I — and **all of
+   them are included automatically**. (To look at a subset later, use the
+   Fund filter that every pivot in the output carries.)
 4. Click **Next: Review Mapping →**.
 
 ### Screen 2 — Review Mapping  ← *the one step that needs your judgment*

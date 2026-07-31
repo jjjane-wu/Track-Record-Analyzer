@@ -61,7 +61,6 @@ def _init_state():
         "raw_df": None,
         "meta": None,
         "mapping": None,
-        "selected_funds": [],
         "fund_vintage_map": {},
         "all_funds": [],
         "profile": None,             # WorkbookProfile from profiler (Stage 1)
@@ -344,16 +343,9 @@ if st.session_state.screen == 1:
                    f"**{st.session_state.meta.get('raw_sheet_name')}**")
 
         all_funds = st.session_state.all_funds
-        st.subheader("Select Funds to Include in Analysis")
-        st.caption("Choose which historical funds to include in the track record analysis template.")
-
-        # Default: last 5 funds
-        default_selected = all_funds[-5:] if len(all_funds) >= 5 else all_funds
-        selected_funds = st.multiselect(
-            "Funds",
-            options=all_funds,
-            default=default_selected,
-        )
+        if all_funds:
+            st.caption(f"**{len(all_funds)} fund(s) detected — all will be included:** "
+                       + ", ".join(all_funds))
 
         st.dataframe(
             st.session_state.raw_df.head(5),
@@ -361,8 +353,7 @@ if st.session_state.screen == 1:
             height=200,
         )
 
-        if st.button("Next: Review Mapping →", type="primary", disabled=(not selected_funds)):
-            st.session_state.selected_funds = selected_funds
+        if st.button("Next: Review Mapping →", type="primary"):
             st.session_state.screen = 2
             st.rerun()
 
@@ -578,7 +569,7 @@ elif st.session_state.screen == 3:
     gp             = st.session_state.gp_name
     fund_name      = st.session_state.fund_name
     field_to_col   = st.session_state.mapping["field_to_col"]
-    selected_funds = st.session_state.selected_funds
+    selected_funds = st.session_state.all_funds   # every detected fund
 
     if df is None:
         st.error("No data. Go back to Screen 1.")
@@ -592,10 +583,7 @@ elif st.session_state.screen == 3:
         fund_col = field_to_col.get("fund")
         date_col = field_to_col.get("entry_date")
 
-        if fund_col and fund_col in df.columns:
-            df_filtered = df[df[fund_col].astype(str).isin(selected_funds)].copy()
-        else:
-            df_filtered = df.copy()
+        df_filtered = df.copy()               # all funds are included
 
         fund_vintage_map = {}
         if fund_col and date_col and date_col in df_filtered.columns:
@@ -743,7 +731,6 @@ elif st.session_state.screen == 3:
         st.session_state.raw_df               = None
         st.session_state.meta                 = None
         st.session_state.mapping              = None
-        st.session_state.selected_funds       = []
         st.session_state.fund_vintage_map     = {}
         st.session_state.all_funds            = []
         st.session_state.profile              = None
