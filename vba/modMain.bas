@@ -18,12 +18,14 @@ Attribute VB_Name = "modMain"
 ' ===================================================================
 Option Explicit
 
+Private mDealCount As Long        ' captured before the inputs sheet is removed
+
 Public Sub BuildAnalysisWorkbook()
     Dim t0 As Double, problems As String
     t0 = Timer
     problems = BuildCore()
     If Len(problems) = 0 Then
-        MsgBox "Built all 8 tabs (" & modBuild.DealCount() & " deals) in " & _
+        MsgBox "Built all 7 tabs (" & mDealCount & " deals) in " & _
                Format(Timer - t0, "0.0") & "s.", vbInformation, "TR Analyzer (VBA)"
     Else
         MsgBox "Build finished with problems:" & vbCrLf & problems, _
@@ -53,6 +55,7 @@ Private Function BuildCore() As String
     modCharts.ResetStage
 
     ' Deal List is the foundation - if it fails, nothing else can build.
+    mDealCount = modBuild.DealCount()
     modBuild.BuildDealList
     Application.Calculate
 
@@ -62,6 +65,13 @@ Private Function BuildCore() As String
     RunTab problems, "Vintage Perf by Sector", "modVintage.BuildVintagePerf"
     RunTab problems, "Deployment & Exits", "modDeployment.BuildDeployment"
     RunTab problems, "Table of Contents", "modToc.BuildTOC"
+
+    ' the inputs sheet is a transient import vehicle - consumed, then removed
+    On Error Resume Next
+    Application.DisplayAlerts = False
+    ThisWorkbook.Worksheets("Deal Level Inputs").Delete
+    Application.DisplayAlerts = True
+    On Error GoTo hardFail
 
     ArrangeSheets
     On Error Resume Next
@@ -89,7 +99,7 @@ End Sub
 
 Private Sub ArrangeSheets()
     Dim order As Variant, i As Long
-    order = Array("Table of Contents", "Deal Level Inputs", "Deal List", _
+    order = Array("Table of Contents", "Deal List", _
                   "Return & Loss Ratios", "Return Dispersion", _
                   "Portfolio Construction", "Vintage Perf by Sector", _
                   "Deployment & Exits")

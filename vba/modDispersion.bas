@@ -34,12 +34,9 @@ Private Function BuildSection(ws As Worksheet, ByVal anchor As Long, _
     modUtil.HideBlank pt, bucketField
     modUtil.ApplyCanonicalOrder pt, bucketField
 
-    ' chart: % IC per bucket, n/a excluded
-    Dim cats As New Collection, allCats As Collection, v() As Variant, i As Long, n As Long
-    Set allCats = modCharts.AxisItems(pt, bucketField)
-    For i = 1 To allCats.Count
-        If allCats(i) <> "n/a" Then cats.Add allCats(i)
-    Next i
+    ' chart: % IC per bucket (AxisItems already excludes blank / n/a)
+    Dim cats As Collection, v() As Variant, i As Long
+    Set cats = modCharts.AxisItems(pt, bucketField)
     If cats.Count > 0 Then
         ReDim v(1 To cats.Count)
         For i = 1 To cats.Count

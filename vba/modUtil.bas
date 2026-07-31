@@ -46,17 +46,18 @@ Public Sub AddData(pt As PivotTable, ByVal fieldName As String, _
     If Len(numFmt) > 0 Then df.NumberFormat = numFmt
 End Sub
 
-' Standard meta block (title + GP / as-of / currency linked to Deal List).
+' Standard meta block (title + GP / as-of / currency). VALUES copied from
+' the already-built Deal List - no cross-sheet links anywhere, so sheet
+' rebuilds can never break these cells.
 Public Sub MetaBlock(ws As Worksheet, ByVal title As String)
+    Dim dl As Worksheet
+    Set dl = ThisWorkbook.Worksheets("Deal List")
     ws.Range("B2").Value = title
     ws.Range("B2").Font.Bold = True: ws.Range("B2").Font.Size = 16
-    ' link straight to Deal Level Inputs: that sheet is never rebuilt, so
-    ' the references survive a Deal List rebuild (via 'Deal List' they
-    ' turned into #REF! whenever it was deleted and recreated)
-    ws.Range("B4").Value = "Sponsor/GP:": ws.Range("C4").Formula = "='Deal Level Inputs'!$C$3"
-    ws.Range("B5").Value = "As of Date:": ws.Range("C5").Formula = "='Deal Level Inputs'!$C$4"
+    ws.Range("B4").Value = "Sponsor/GP:": ws.Range("C4").Value = dl.Range("C4").Value
+    ws.Range("B5").Value = "As of Date:": ws.Range("C5").Value = dl.Range("C5").Value
     ws.Range("C5").NumberFormat = "d-mmm-yy"
-    ws.Range("B6").Value = "Currency:":   ws.Range("C6").Formula = "='Deal Level Inputs'!$C$5"
+    ws.Range("B6").Value = "Currency:":   ws.Range("C6").Value = dl.Range("C6").Value
 End Sub
 
 Public Sub SectionTitle(ws As Worksheet, ByVal r As Long, ByVal c As Long, _

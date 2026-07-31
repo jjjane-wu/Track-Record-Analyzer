@@ -43,9 +43,12 @@ raw GP file ──► Python app (parse + map, unchanged)
 The four `.bas` files are the version-controlled source; the assembled
 `TR-Analyzer.xlsm` itself stays out of git (`*.xlsm` is ignored).
 
-**All 8 output tabs are ported** (TOC, Deal Level Inputs consumed as input,
-Deal List, Return & Loss Ratios, Return Dispersion, Portfolio Construction,
-Vintage Perf by Sector, Deployment & Exits), including charts. Not ported:
+**The output is 7 tabs** (TOC, Deal List, Return & Loss Ratios, Return
+Dispersion, Portfolio Construction, Vintage Perf by Sector, Deployment &
+Exits), including charts. The imported Deal Level Inputs sheet is a
+transient vehicle: its data lands in the Deal List as plain VALUES (no
+cross-sheet links) and the sheet itself is removed at the end of the
+build. Chart snapshots exclude blank and n/a categories. Not ported:
 pixel-exact template styling (fills, column widths, exact chart palettes) —
 functional parity first; polish after the Windows validation run.
 

@@ -45,9 +45,12 @@ End Function
 
 ' Visible, non-blank axis items of a built (still unfiltered) pivot.
 Public Function AxisItems(pt As PivotTable, ByVal fieldName As String) As Collection
+    ' Chart categories: visible items minus blanks and "n/a" - charts never
+    ' show empty or n/a buckets (the pivots keep them).
     Dim out As New Collection, pi As PivotItem
     For Each pi In pt.PivotFields(fieldName).PivotItems
-        If pi.Visible And pi.Name <> "(blank)" Then out.Add pi.Name
+        If pi.Visible And pi.Name <> "(blank)" And pi.Name <> "n/a" _
+           And Len(Trim$(pi.Name)) > 0 Then out.Add pi.Name
     Next pi
     Set AxisItems = out
 End Function

@@ -34,9 +34,8 @@ Public Function DealCount() As Long
     DealCount = r - IN_DATA_ROW
 End Function
 
-' column letter of an input-tab header (for in:-link resolution).
-' Called once per formula cell, so the spec array is loaded once and cached.
-Private Function InputColLetter(ByVal header As String) As String
+' 1-based position of an input-tab header (for copying its values).
+Private Function InputColIndex(ByVal header As String) As Long
     Static loaded As Boolean
     Static hdrs() As String
     Dim i As Long
@@ -46,7 +45,7 @@ Private Function InputColLetter(ByVal header As String) As String
     End If
     For i = 1 To modSpec.IN_NCOLS
         If hdrs(i) = header Then
-            InputColLetter = Split(Cells(1, FIRST_COL + i - 1).Address, "$")(1)
+            InputColIndex = i
             Exit Function
         End If
     Next i
@@ -54,20 +53,10 @@ Private Function InputColLetter(ByVal header As String) As String
 End Function
 
 ' same prefix semantics as Python _dl_src_formula
+' Formula specs only; in:/in0: columns are copied as VALUES (the final
+' workbook carries no Deal Level Inputs sheet to link to).
 Private Function ResolveSpec(ByVal spec As String, ByVal r As Long) As String
-    Dim inputRow As Long, col As String, src As String
-    inputRow = IN_DATA_ROW + (r - DL_DATA_ROW)
-    If Len(spec) = 0 Then
-        ResolveSpec = ""
-    ElseIf Left$(spec, 4) = "in0:" Then
-        col = InputColLetter(Mid$(spec, 5))
-        src = "'Deal Level Inputs'!" & col & inputRow
-        ResolveSpec = "=IF(" & src & "="""",0," & src & ")"
-    ElseIf Left$(spec, 3) = "in:" Then
-        col = InputColLetter(Mid$(spec, 4))
-        src = "'Deal Level Inputs'!" & col & inputRow
-        ResolveSpec = "=IF(" & src & "="""",""""," & src & ")"
-    ElseIf Left$(spec, 3) = "FT:" Then
+    If Left$(spec, 3) = "FT:" Then
         ResolveSpec = "=" & Mid$(spec, 4)
     ElseIf Left$(spec, 2) = "F:" Then
         ResolveSpec = "=" & Replace(Mid$(spec, 3), "{r}", CStr(r))
@@ -95,22 +84,6 @@ Public Function FreshSheet(ByVal name As String) As Worksheet
     Set FreshSheet = ws
 End Function
 
-' Deal Level Inputs: every typed-in cell gets the classic light-blue
-' fill + blue font (the sheet arrives via copy/inject; theme-based fills
-' can degrade across workbooks, so restate them explicitly).
-Public Sub StyleInputs()
-    Dim ws As Worksheet, n As Long, rng As Range
-    Set ws = ThisWorkbook.Worksheets("Deal Level Inputs")
-    n = DealCount()
-    If n = 0 Then Exit Sub
-    Set rng = ws.Range(ws.Cells(IN_DATA_ROW, FIRST_COL), _
-                       ws.Cells(IN_DATA_ROW + n - 1, FIRST_COL + modSpec.IN_NCOLS - 1))
-    rng.Interior.Color = RGB(222, 235, 247)
-    rng.Font.Color = RGB(0, 0, 255)
-    ws.Range("C3:C5").Interior.Color = RGB(222, 235, 247)   ' GP / date / ccy
-    ws.Range("C3:C5").Font.Color = RGB(0, 0, 255)
-End Sub
-
 Public Sub BuildDealList()
     Dim ws As Worksheet, n As Long, i As Long, r As Long
     Dim h() As String, f() As String, fmt() As String, tag() As String
@@ -118,22 +91,27 @@ Public Sub BuildDealList()
 
     n = DealCount()
     If n = 0 Then Err.Raise vbObjectError + 2, , "No deals found on 'Deal Level Inputs'"
-    StyleInputs
     modSpec.LoadDealListSpec h, f, fmt, tag
 
     Set ws = FreshSheet("Deal List")
+    Dim lastRow As Long
+    lastRow = DL_DATA_ROW + n - 1
 
-    ' -- meta block ---------------------------------------------------
+    ' -- read the imported inputs ONCE (sheet is deleted after the build) --
+    Dim inWs As Worksheet, data As Variant
+    Set inWs = ThisWorkbook.Worksheets("Deal Level Inputs")
+    data = inWs.Range(inWs.Cells(IN_DATA_ROW, FIRST_COL), _
+                      inWs.Cells(IN_DATA_ROW + n - 1, FIRST_COL + modSpec.IN_NCOLS - 1)).Value
+
+    ' -- meta block: VALUES (no cross-sheet links anywhere) ---------------
     ws.Range("B2").Value = "Deal List": ws.Range("B2").Font.Bold = True
     ws.Range("B2").Font.Size = 16
-    ws.Range("B4").Value = "Sponsor/GP:":  ws.Range("C4").Formula = "='Deal Level Inputs'!C3"
-    ws.Range("B5").Value = "As of Date:":  ws.Range("C5").Formula = "='Deal Level Inputs'!C4"
+    ws.Range("B4").Value = "Sponsor/GP:":  ws.Range("C4").Value = inWs.Range("C3").Value
+    ws.Range("B5").Value = "As of Date:":  ws.Range("C5").Value = inWs.Range("C4").Value
     ws.Range("C5").NumberFormat = "d-mmm-yy"
-    ws.Range("B6").Value = "Currency:":    ws.Range("C6").Formula = "='Deal Level Inputs'!C5"
+    ws.Range("B6").Value = "Currency:":    ws.Range("C6").Value = inWs.Range("C5").Value
 
-    Dim lastRow As Long: lastRow = DL_DATA_ROW + n - 1
-
-    ' -- tag row 12 + header row 13 -----------------------------------
+    ' -- tag row 12 + header row 13 ---------------------------------------
     For i = 1 To modSpec.DL_NCOLS
         If Len(tag(i)) > 0 Then ws.Cells(DL_HDR_ROW - 1, FIRST_COL + i - 1).Value = tag(i)
         ws.Cells(DL_HDR_ROW, FIRST_COL + i - 1).Value = h(i)
@@ -141,16 +119,15 @@ Public Sub BuildDealList()
     Next i
     ws.Rows(DL_HDR_ROW).RowHeight = 35.5
 
-    ' -- table FIRST (structured refs need it), then formulas ----------
+    ' -- table FIRST (structured refs need it) ----------------------------
     Dim tbl As ListObject
     Set tbl = ws.ListObjects.Add(xlSrcRange, _
         ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), ws.Cells(lastRow, FIRST_COL + modSpec.DL_NCOLS - 1)), , xlYes)
-    tbl.name = "DealLevelInput"
+    tbl.Name = "DealLevelInput"
     tbl.TableStyle = ""
 
     ' -- header block AFTER the table exists: its formulas reference the
-    '    DealLevelInput table and .Formula parses references immediately
-    '    (the Python XML writer does not care about order; VBA does)
+    '    DealLevelInput table and .Formula parses references immediately --
     modSpec.LoadHeaderBlock refs, vals, isNum, numv
     For i = LBound(refs) To UBound(refs)
         If isNum(i) Then
@@ -164,15 +141,27 @@ Public Sub BuildDealList()
         End If
     Next i
 
-    Dim colFormulas() As Variant
+    ' -- columns: input specs as VALUES, F:/FT: specs as formulas ---------
+    Dim colVals() As Variant, j As Long, zeroDefault As Boolean, v As Variant
     For i = 1 To modSpec.DL_NCOLS
-        If Len(f(i)) > 0 Then
-            ReDim colFormulas(1 To n, 1 To 1)
-            For r = DL_DATA_ROW To lastRow
-                colFormulas(r - DL_DATA_ROW + 1, 1) = ResolveSpec(f(i), r)
+        If Left$(f(i), 3) = "in:" Or Left$(f(i), 4) = "in0:" Then
+            zeroDefault = (Left$(f(i), 4) = "in0:")
+            j = InputColIndex(Mid$(f(i), IIf(zeroDefault, 5, 4)))
+            ReDim colVals(1 To n, 1 To 1)
+            For r = 1 To n
+                v = data(r, j)
+                If zeroDefault And (IsEmpty(v) Or Trim$(CStr(v)) = "") Then v = 0
+                colVals(r, 1) = v
             Next r
             ws.Range(ws.Cells(DL_DATA_ROW, FIRST_COL + i - 1), _
-                     ws.Cells(lastRow, FIRST_COL + i - 1)).Formula = colFormulas
+                     ws.Cells(lastRow, FIRST_COL + i - 1)).Value = colVals
+        ElseIf Len(f(i)) > 0 Then
+            ReDim colVals(1 To n, 1 To 1)
+            For r = DL_DATA_ROW To lastRow
+                colVals(r - DL_DATA_ROW + 1, 1) = ResolveSpec(f(i), r)
+            Next r
+            ws.Range(ws.Cells(DL_DATA_ROW, FIRST_COL + i - 1), _
+                     ws.Cells(lastRow, FIRST_COL + i - 1)).Formula = colVals
         End If
         If Len(fmt(i)) > 0 Then
             ws.Range(ws.Cells(DL_DATA_ROW, FIRST_COL + i - 1), _
@@ -180,25 +169,22 @@ Public Sub BuildDealList()
         End If
     Next i
 
-    ' -- readability styling (mirrors the Python build's conventions) --
+    ' -- readability styling (mirrors the Python build) -------------------
     Dim hdr As Range, body As Range
     Set hdr = ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), _
                        ws.Cells(DL_HDR_ROW, FIRST_COL + modSpec.DL_NCOLS - 1))
-    hdr.Interior.Color = RGB(31, 78, 120)         ' dark blue banner
+    hdr.Interior.Color = RGB(31, 78, 120)
     hdr.Font.Color = RGB(255, 255, 255)
     hdr.Font.Bold = True
     hdr.WrapText = True
     hdr.VerticalAlignment = xlVAlignCenter
-
     Set body = ws.Range(ws.Cells(DL_HDR_ROW, FIRST_COL), _
                         ws.Cells(lastRow, FIRST_COL + modSpec.DL_NCOLS - 1))
     With body.Borders
         .LineStyle = xlContinuous
         .Weight = xlThin
-        .Color = RGB(208, 208, 208)               ' light grid
+        .Color = RGB(208, 208, 208)
     End With
-
-    ' five key computed columns get the template's light-grey fill
     For i = 1 To modSpec.DL_NCOLS
         If h(i) = "Total" & Chr(10) & "Value" _
            Or h(i) = "Gross" & Chr(10) & "MOIC" _
@@ -209,11 +195,9 @@ Public Sub BuildDealList()
                      ws.Cells(lastRow, FIRST_COL + i - 1)).Interior.Color = RGB(242, 242, 242)
         End If
     Next i
-
-    ' widths + frozen header row / company column
-    ws.Columns(2).ColumnWidth = 26                ' Company
+    ws.Columns(2).ColumnWidth = 26
     ws.Range(ws.Columns(3), ws.Columns(FIRST_COL + modSpec.DL_NCOLS - 1)).ColumnWidth = 13
-    On Error Resume Next                          ' needs a visible window
+    On Error Resume Next
     ws.Activate
     ws.Range("C" & DL_DATA_ROW).Select
     ActiveWindow.FreezePanes = True
