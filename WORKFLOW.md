@@ -37,8 +37,9 @@ profiles the workbook and shows:
 - **Workbook Structure** — the sheets/tables found, with the detected layout
   (consolidated vs per-fund tabs); the analyst can override which table is
   used or which tabs are combined
-- **Select Funds to Include in Analysis** — after parsing, a fund multiselect
-  (defaults to all detected funds)
+- **Funds** — after parsing, the detected funds are listed and ALL of them
+  are included automatically (the fund multiselect was removed; per-fund
+  views live in the output's Fund report filters)
 
 Parsing runs the full pipeline (Stages 1–6 below) and moves to Screen 2.
 
