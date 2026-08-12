@@ -19,7 +19,9 @@ actually evaluating the manager.
 
 Everything happens in your web browser — no spreadsheets to edit by hand, no
 scripts to run. The app runs entirely on the local machine: GP data never
-leaves it, and no external services are involved.
+leaves it, and no external services are involved. (The optional last step —
+publishing verified deals to the team database — copies data only into your
+own team's SharePoint folder, nothing else.)
 
 ---
 
@@ -89,35 +91,70 @@ The tool builds the hand-off file. What you see:
   you run it). A backup copy is kept automatically.
 - **Step-by-step instructions** for the final step: open
   **TR-Analyzer.xlsm**, run the **`ImportInputsAndBuild`** macro (Opt+F8 /
-  Alt+F8), pick the downloaded file — it rebuilds all 8 analysis tabs.
+  Alt+F8), pick the downloaded file — it imports the data and builds the 7
+  analysis tabs.
 - A **mapping log** and an **error log** at the bottom, for the record.
 
 Something looks off? Click **← Back**, fix the mapping, download again,
-re-run the macro — it takes seconds. Never hand-patch the analysis
-workbook's data: fix the mapping instead.
+re-run the macro — it takes seconds. For one-off data corrections (a value
+the GP itself reported wrongly, a junk row that slipped through), edit the
+**downloaded input file** in Excel and re-run the macro on it: that file is
+the single source of truth. Never hand-patch the analysis workbook itself.
 
 ---
 
-## What you get — eight tabs, one line each
+## Publishing to the database *(optional, after verification)*
+
+Verified deals can go into the team's cross-GP **deal database** — the pool
+that feeds the Power BI dashboard. This is deliberately a separate, manual
+step: the app's automated output may still contain mapping or data errors,
+so nothing enters the database until a person has checked it.
+
+1. Open the corrected Deal Level Input file in Excel one last time — this
+   exact file is what gets published.
+2. In the app's sidebar, switch to **Publish to database**.
+3. Upload the file. The app re-checks it and shows the results:
+   - **Errors** (missing company names, text in number columns, unreadable
+     dates) **block publishing** — fix them in Excel and upload again.
+   - **Warnings** (blank funds, odd-looking IRRs, duplicate deals) don't
+     block, but you must tick a box confirming you've checked them.
+4. Click **Publish**. One CSV snapshot is written per GP per as-of date
+   (`GP_2 - 2025-09-30.csv`) into the database folder, stamped with who
+   published it and when.
+
+Re-publishing the same GP and date **replaces** its snapshot — corrections
+never create duplicates. A newer reporting date adds a new snapshot, so the
+GP's history is kept. The page also lists everything currently in the
+database.
+
+The database folder is just a folder. Once it points at the team's
+OneDrive-synced SharePoint folder (**Publish to database → Database
+folder**), every publish uploads itself and the Power BI dashboard picks it
+up on its next refresh — setup notes in `database/POWERBI_SETUP.md`.
+
+---
+
+## What you get — seven tabs, one line each
 
 Every tab opens with a numbered, clickable contents list; the workbook opens
-on a Table of Contents that jumps to any tab.
+on a Table of Contents that jumps to any tab. The imported deal data lands
+directly in the Deal List as plain values — the workbook carries no separate
+inputs tab and no links back to the input file.
 
 1. **Table of Contents** — navigation.
-2. **Deal Level Inputs** — the cleaned deal data (28 standard columns, incl.
-   a per-fund currency; Realized Value shows an explicit 0 when the GP
-   provided none); the single source of truth and the only tab you edit.
-3. **Deal List** — full per-deal analytics as live formulas; the blue
-   threshold tables set every bucket boundary (edit = instant sensitivity).
-4. **Return & Loss Ratios** — pooled MOIC + Loss Ratio across 15 cuts
+2. **Deal List** — the imported deal data (28 standard columns, incl. a
+   per-fund currency; Realized Value shows an explicit 0 when the GP provided
+   none) plus full per-deal analytics; the blue threshold tables set every
+   bucket boundary (edit = instant sensitivity).
+3. **Return & Loss Ratios** — pooled MOIC + Loss Ratio across 15 cuts
    (sector, geography, vintage, fund, size, exit, sourcing …), chart per cut.
-5. **Return Dispersion** — MOIC and IRR distributions: Count, % IC, and
+4. **Return Dispersion** — MOIC and IRR distributions: Count, % IC, and
    average per bucket — the outlier-dependence and left-tail view.
-6. **Portfolio Construction** — capital mix by fund × sector/geography plus
+5. **Portfolio Construction** — capital mix by fund × sector/geography plus
    deal-count attributes — concentration, strategy drift, sourcing profile.
-7. **Vintage Perf by Sector** — invested capital, MOIC and loss ratio by
+6. **Vintage Perf by Sector** — invested capital, MOIC and loss ratio by
    vintage (4 filters) plus vintage × sector count and pooled-MOIC matrices.
-8. **Deployment & Exits** — capital deployment pacing (vintage × fund) and
+7. **Deployment & Exits** — capital deployment pacing (vintage × fund) and
    realization pacing (fund × exit year), pre-filtered to realized exits.
 
 *(Four further tabs — Underperforming Assets, Partner Attribution, Op
@@ -135,8 +172,9 @@ For metric definitions and how to read them, see **Metric Guide.md**.
   the operating tabs add Sector). Status = *Realized* is the acid test
   (GP_2: recalculates from 90 deals to 38) — the track record in cash terms,
   with the GP's own marks stripped out.
-- **Charts never change** — they're fixed snapshots of the full portfolio;
-  the pivots are for exploring.
+- **Charts never change** — they're fixed snapshots of the full portfolio
+  (blank / n/a categories are left off the charts); the pivots are for
+  exploring.
 - **Deals missing a label are hidden from that pivot and its totals** — GP_2
   has 9 deals with no sector, so the Sector pivot totals 81, not 90. Nothing
   is deleted: un-hide via the pivot's filter dropdown. Missing MOIC/IRR shows
