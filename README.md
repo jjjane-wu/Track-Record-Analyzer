@@ -58,10 +58,12 @@ package downloads (IT can allow `pypi.org`).
 | `vba/` | **This branch's focus**: VBA output builder — importable modules, code generator, one-command build scripts (see `vba/README.md`) |
 | `User Guide.md` | How to use the app, screen by screen |
 | `WORKFLOW.md` | Technical documentation of the pipeline (for maintainers) |
-| `database/POWERBI_SETUP.md` | Notes for a future cross-GP database (feature currently disabled) |
+| `database/POWERBI_SETUP.md` | The cross-GP deal database (CSV snapshots → SharePoint → Power BI): how it works and how to connect |
 
 Created at first run, not in the repository: `venv/` (the app's private
-Python environment), `outputs/` (a backup copy of every generated workbook).
+Python environment), `outputs/` (a backup copy of every generated workbook),
+`database/deals/` (published database snapshots, until the database folder
+is pointed at SharePoint).
 
 ---
 

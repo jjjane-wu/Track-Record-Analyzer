@@ -43,6 +43,7 @@ from transformer import (
 from build_output import build_inputs_workbook
 from pipeline import GPParserPipeline, PipelineResult
 from inferencer import CONFIDENCE_AUTO, CONFIDENCE_REVIEW
+import db_publish
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
@@ -81,17 +82,26 @@ with st.sidebar:
     st.caption("UNJSPF OIM — Phase 1")
     st.divider()
 
-    screens = {1: "① Upload", 2: "② Mapping Review", 3: "③ Output & Download"}
-    for num, label in screens.items():
-        active = st.session_state.screen == num
-        if active:
-            st.markdown(f"**→ {label}**")
-        else:
-            st.markdown(f"  {label}")
-
+    app_mode = st.radio(
+        "Mode",
+        ["Analyze a GP file", "Publish to database"],
+        key="app_mode",
+        label_visibility="collapsed",
+    )
     st.divider()
-    if st.session_state.gp_name:
-        st.caption(f"GP: **{st.session_state.gp_name}**")
+
+    if app_mode == "Analyze a GP file":
+        screens = {1: "① Upload", 2: "② Mapping Review", 3: "③ Output & Download"}
+        for num, label in screens.items():
+            active = st.session_state.screen == num
+            if active:
+                st.markdown(f"**→ {label}**")
+            else:
+                st.markdown(f"  {label}")
+
+        st.divider()
+        if st.session_state.gp_name:
+            st.caption(f"GP: **{st.session_state.gp_name}**")
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Profile display helper
@@ -165,6 +175,114 @@ def _display_workbook_profile(profile: "WorkbookProfile") -> None:
 
     for w in profile.warnings:
         st.warning(w)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Publish-to-database page (separate mode, outside the 3-screen flow)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _render_publish_page() -> None:
+    st.title("Publish to the Deal Database")
+    st.markdown(
+        "The database only takes **verified** data. First correct and check the "
+        "downloaded Deal Level Input file in Excel; when you are sure the "
+        "numbers are right, publish that file here. Each publish writes one CSV "
+        "snapshot per GP per as-of date into the database folder — re-publishing "
+        "the same GP and date **replaces** its snapshot, so corrections never "
+        "create duplicates. Power BI reads the folder and combines every "
+        "snapshot into one long deal table."
+    )
+
+    cfg = db_publish.load_db_config()
+    with st.expander("Database folder", expanded=False):
+        st.caption(
+            "Published snapshots land in this folder. Point it at a folder "
+            "inside your OneDrive-synced SharePoint library and every publish "
+            "uploads itself automatically — no other steps needed. "
+            "Power BI setup notes: `database/POWERBI_SETUP.md`."
+        )
+        new_dir = st.text_input("Folder path", value=cfg["deals_dir"])
+        if st.button("Save folder") and new_dir.strip():
+            db_publish.save_db_config(new_dir.strip())
+            st.rerun()
+
+    uploaded = st.file_uploader(
+        "Verified Deal Level Input file",
+        type=["xlsx"],
+        help="The corrected [dd-mmm-yy - GP] - Gross Deal Level Input.xlsx",
+    )
+
+    if uploaded:
+        try:
+            parsed = db_publish.read_input_workbook(
+                uploaded.getvalue(), source_name=uploaded.name)
+        except Exception as e:
+            st.error(f"Could not read the file: {e}")
+            parsed = None
+
+        if parsed:
+            errors, warnings = db_publish.validate(parsed)
+
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("GP", parsed.gp or "—")
+            c2.metric("As of", parsed.as_of.isoformat() if parsed.as_of else "—")
+            c3.metric("Currency", parsed.currency or "—")
+            c4.metric("Deals", len(parsed.rows))
+
+            for e in errors:
+                st.error(e, icon="🚨")
+            for w in warnings:
+                st.warning(w, icon="⚠️")
+            if not errors and not warnings:
+                st.success("All checks passed.")
+
+            with st.expander("Preview — exactly what will be published", expanded=False):
+                st.dataframe(db_publish.to_long_table(parsed).head(10),
+                             use_container_width=True, hide_index=True)
+
+            snap_name = db_publish.snapshot_filename(parsed)
+            target = Path(cfg["deals_dir"]).expanduser() / snap_name
+            if target.exists():
+                st.info(f"A snapshot for this GP and as-of date already exists — "
+                        f"publishing will replace **{snap_name}**.")
+
+            confirm_ok = True
+            if warnings and not errors:
+                confirm_ok = st.checkbox(
+                    "I've checked the warnings above — the data is correct as-is.")
+
+            by = st.text_input("Published by",
+                               value=st.session_state.analyst_name or "")
+
+            if errors:
+                st.caption("The errors above must be fixed in Excel before "
+                           "this file can be published.")
+            if st.button(f"Publish {snap_name} →", type="primary",
+                         disabled=bool(errors) or not confirm_ok):
+                try:
+                    path, replaced = db_publish.publish(
+                        parsed, cfg["deals_dir"], published_by=by.strip())
+                    st.session_state.analyst_name = by.strip()
+                    verb = "Replaced" if replaced else "Published"
+                    st.success(f"{verb} **{path.name}** — {len(parsed.rows)} "
+                               f"deals → `{path.parent}`")
+                except Exception as e:
+                    st.error(f"Publish failed: {e}")
+
+    st.divider()
+    st.subheader("Database contents")
+    snaps = db_publish.list_snapshots(cfg["deals_dir"])
+    if len(snaps):
+        st.dataframe(snaps, use_container_width=True, hide_index=True)
+        st.caption(f"{len(snaps)} snapshot(s), {int(snaps['Deals'].sum())} deal "
+                   f"rows — folder: `{cfg['deals_dir']}`")
+    else:
+        st.caption(f"No snapshots yet — folder: `{cfg['deals_dir']}`")
+
+
+if st.session_state.get("app_mode") == "Publish to database":
+    _render_publish_page()
+    st.stop()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -701,10 +819,12 @@ elif st.session_state.screen == 3:
             "(or Tools → Macro → Macros…).\n"
             "3. Run **`ImportInputsAndBuild`** and pick the file you just "
             "downloaded.\n"
-            "4. It swaps in the new Deal Level Inputs sheet and rebuilds all "
-            "8 analysis tabs; a confirmation dialog appears when done.\n\n"
+            "4. It imports the file's data and builds the 7 analysis tabs; "
+            "a confirmation dialog appears when done.\n\n"
             "*Processing another GP later? Just run the macro again with the "
-            "new file — everything rebuilds, nothing to clean up first.*"
+            "new file — everything rebuilds, nothing to clean up first.*\n\n"
+            "*Once you've verified the numbers, the same file can go into the "
+            "deal database — switch to **Publish to database** in the sidebar.*"
         )
 
     # ── Mapping log preview ──────────────────────────────────────────

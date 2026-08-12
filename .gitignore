@@ -14,6 +14,8 @@ outputs/
 configs/
 database/*.csv
 database/*.lock
+database/deals/
+database/db_config.json
 
 # ── Confidential GP data — never commit, under any name ──────────────
 IO/
