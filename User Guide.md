@@ -90,9 +90,12 @@ The tool builds the hand-off file. What you see:
   `[13-Jul-26 - GP_2] - Gross Deal Level Input.xlsx` (the date is the day
   you run it). A backup copy is kept automatically.
 - **Step-by-step instructions** for the final step: open
-  **TR-Analyzer.xlsm**, run the **`ImportInputsAndBuild`** macro (Opt+F8 /
-  Alt+F8), pick the downloaded file — it imports the data and builds the 7
-  analysis tabs.
+  **TR-Analyzer.xlsm** — it comes with the app, in the **`vba`** folder of
+  the folder you unzipped (click *Enable Macros* when Excel asks) — run the
+  **`ImportInputsAndBuild`** macro (Opt+F8 / Alt+F8), pick the downloaded
+  file — it imports the data and builds the 7 analysis tabs. Tip: save the
+  built analysis under its own name (e.g. `GP_2 - Analysis.xlsm`) so the
+  original analyzer stays empty and ready for the next GP.
 - A **mapping log** and an **error log** at the bottom, for the record.
 
 Something looks off? Click **← Back**, fix the mapping, download again,

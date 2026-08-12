@@ -24,6 +24,8 @@ IO/
 templates/
 *.xlsx
 *.xlsm
+# single audited exception: the empty analyzer workbook (macros only, no data)
+!/vba/TR-Analyzer.xlsm
 *.xls
 *.pdf
 

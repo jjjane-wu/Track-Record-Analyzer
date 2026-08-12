@@ -814,7 +814,8 @@ elif st.session_state.screen == 3:
 
         st.markdown("#### Next: build the analysis in TR-Analyzer.xlsm")
         st.markdown(
-            "1. Open **TR-Analyzer.xlsm** (click *Enable Macros* if prompted).\n"
+            "1. Open **TR-Analyzer.xlsm** — it comes with the app, in the `vba` "
+            "folder (click *Enable Macros* if prompted).\n"
             "2. Press **Opt+F8** on Mac / **Alt+F8** on Windows "
             "(or Tools → Macro → Macros…).\n"
             "3. Run **`ImportInputsAndBuild`** and pick the file you just "

@@ -40,8 +40,16 @@ raw GP file ──► Python app (parse + map, unchanged)
 | `mac_build.sh` | Mac dev helper: open + run macro + save via AppleScript. |
 | `pipeline.bat` | The team's one command: raw GP file → `headless.py` parse → `build.vbs` → finished analysis (see above). |
 
-The four `.bas` files are the version-controlled source; the assembled
-`TR-Analyzer.xlsm` itself stays out of git (`*.xlsm` is ignored).
+The `.bas` files are the version-controlled source. The assembled workbook
+**ships in this folder as `TR-Analyzer.xlsm`** — the single audited
+exception to the repo's `*.xlsm` ban. The committed copy is *pristine*:
+all 11 modules plus one "Start" instructions sheet, **zero data** (verified
+by unpacking the file and scanning every XML part). Analysts open it
+straight from the unzipped folder, click *Enable Macros*, and run
+`ImportInputsAndBuild` — nothing to assemble. **Never commit a built
+copy**: after you run a build, the workbook holds GP data — close it
+without saving, or save it under another name outside the repo; `git
+status` showing `vba/TR-Analyzer.xlsm` as modified is a red flag.
 
 **The output is 7 tabs** (TOC, Deal List, Return & Loss Ratios, Return
 Dispersion, Portfolio Construction, Vintage Perf by Sector, Deployment &
@@ -52,17 +60,22 @@ build. Chart snapshots exclude blank and n/a categories. Not ported:
 pixel-exact template styling (fills, column widths, exact chart palettes) —
 functional parity first; polish after the Windows validation run.
 
-## Assembling the .xlsm (Windows, one-time)
+## Rebuilding the shipped workbook from source (maintainers)
 
-1. Open Excel → blank workbook → save as `TR-Analyzer.xlsm`
-   (macro-enabled). Keep it **outside** git — `*.xlsm` is ignored; the
-   `.bas` files here are the version-controlled source.
-2. `Alt+F11` → File → Import File… → import **all** `.bas` files in this
-   folder (11 modules — `modSpec` must be among them).
-3. Paste a Python-generated **Deal Level Inputs** sheet into the workbook
-   (Move/Copy from any generated output, or paste values; keep the sheet
-   name and the meta cells C3:C5).
-4. `Alt+F8` → run `BuildAnalysisWorkbook`.
+Only needed after editing a `.bas` module:
+
+1. Open your working copy of the analyzer (any built one), enable the VBE
+   trust setting once (Excel → Preferences/Options → Security → *Trust
+   access to the VBA project object model*), and run the `SyncModules`
+   helper — it re-imports every module from this folder.
+2. Delete all data sheets, keep/re-create a single "Start" sheet with the
+   quick instructions, and **Save As** to `vba/TR-Analyzer.xlsm`
+   (macro-enabled format), replacing the committed copy.
+3. Before committing, verify the copy is clean: unzip it and confirm the
+   only worksheet is Start and no GP string appears in any XML part.
+
+(From-scratch assembly still works too: blank macro-enabled workbook →
+`Alt+F11` → File → Import File… → all 11 `.bas` modules.)
 
 ## The team pipeline — one command, raw file to finished analysis
 
@@ -88,9 +101,10 @@ Two ways to feed this template:
 
 1. **Via the Streamlit app** (mapping reviewed by a human): parse the raw
    GP file in the app as usual; on Screen 3 click **"Download Deal Level
-   Input (for the VBA analyzer)"** — that's the hand-off file. Then in
-   `TR-Analyzer.xlsm` run the **`ImportInputsAndBuild`** macro (Alt+F8):
-   pick the downloaded file, and all 8 tabs rebuild from it.
+   Input"** — that's the hand-off file. Then in `vba/TR-Analyzer.xlsm`
+   run the **`ImportInputsAndBuild`** macro (Alt+F8): pick the downloaded
+   file, and the 7 analysis tabs rebuild from it (the imported inputs are
+   consumed into the Deal List as values).
 2. **Fully scripted** (auto-accepted mapping): `pipeline.bat <raw.xlsx>`
    on Windows, or `python3 app/headless.py <raw.xlsx> -o inputs.xlsx`
    plus the `ReplaceInputs` / `BuildHeadless` macros anywhere. headless
@@ -142,3 +156,8 @@ Two preconditions on Windows:
   failed and why — send that text back for fixes.
 - Mac Excel can import and *run* these modules, but validate on Windows —
   that's the deployment target.
+- Mac AppleScript quirk (dev automation only): `run VB macro … arg1 …`
+  fails with error −50 on current Mac Excel — macros must be invoked
+  without arguments from AppleScript (`mac_build.sh` already does; paste
+  the inputs sheet first, then call `BuildHeadless`). Windows COM
+  (`build.vbs`) passes arguments normally.

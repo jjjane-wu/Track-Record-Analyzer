@@ -69,11 +69,27 @@ mapping is what drives generation.
   (date = processing day; square brackets are real — Excel's title bar just
   shows them as parentheses); a copy is saved to `outputs/`
 - Shows in-page instructions for the second half of the hybrid flow:
-  TR-Analyzer.xlsm → `ImportInputsAndBuild` macro → 8 analysis tabs
-- The all-Python 8-tab builder (`build_output`) still exists and is used by
+  `vba/TR-Analyzer.xlsm` (ships in the repo, macros only) →
+  `ImportInputsAndBuild` macro → 7 analysis tabs, inputs consumed into the
+  Deal List as values
+- The all-Python builder (`build_output`) still exists and is used by
   tests/reference runs, but is no longer wired into the UI
 - Shows summary metrics, the full mapping log, and an error log if any
   phase failed
+
+### Publish to database (sidebar mode, outside the 3-screen flow)
+
+A separate, deliberately manual step (`db_publish.py`): the analyst
+corrects and verifies the downloaded Deal Level Input in Excel, then
+uploads that file on the **Publish to database** page. The app re-parses
+it (label-located, so hand edits survive), validates it — hard errors
+(blank companies, text in numeric columns, unreadable dates) block the
+publish; soft warnings need an explicit tick — and writes **one tidy CSV
+snapshot per GP per as-of date** into the configured database folder
+(GP name, as-of date, source file, publisher, timestamp stamped on every
+row; same GP+date republish replaces its snapshot). Point the folder at a
+OneDrive-synced SharePoint library and Power BI reads the whole folder —
+see `database/POWERBI_SETUP.md`.
 
 ---
 
@@ -181,8 +197,11 @@ Screen 2 (confirmed / review / unmapped fields, unmapped columns, findings).
 
 ## Output Builder (`build_output.py`)
 
-> **Branch note (`vba`):** on this branch the output builder is being ported
-> to Excel VBA with native pivots — see `vba/README.md`. The Python builder
+> **Branch note (`vba`):** on this branch the *shipped* build path is VBA:
+> `build_inputs_workbook` produces the Deal Level Input workbook, and
+> `vba/TR-Analyzer.xlsm` (committed, macros only) builds the analysis with
+> native pivots — 7 tabs, no Deal Level Inputs tab; the imported data lands
+> in the Deal List as plain values. See `vba/README.md`. The Python builder
 > below still works and stays the reference implementation; `vba/modSpec.bas`
 > is *generated from* the specs described here, so the two cannot drift.
 
@@ -328,16 +347,18 @@ Track Record Database/
 │   ├── reviewer.py                   — Stage 6: review report
 │   ├── mapper.py                     — Field catalogue (TEMPLATE_FIELDS)
 │   ├── parser.py                     — Low-level Excel reader
-│   ├── build_output.py               — Output builder (sheets + pivot/chart OOXML)
+│   ├── build_output.py               — build_inputs_workbook (hand-off file) + reference all-Python builder
 │   ├── deal_list_spec.py             — Deal List schema: columns, formulas, helpers
-│   ├── csv_writer.py                 — CSV database appender (currently not wired in)
+│   ├── db_publish.py                 — Verified-inputs → database CSV snapshots (validate + publish + CLI)
 │   ├── chart_template.xml            — Combo-chart blueprint (Return & Loss Ratios)
 │   ├── chart_rd.xml                  — Dispersion-chart blueprint
 │   ├── chart_pc_stacked.xml / _ser / _pie — Portfolio Construction chart blueprints
 │   ├── chart_vintage.xml / chart_op.xml — Vintage & Op Performance chart blueprints
 │   └── drawing_anchor_template.xml   — Chart anchor blueprint
+├── vba/                              — The VBA analyzer: TR-Analyzer.xlsm (shipped, macros only),
+│                                        11 .bas source modules, generate_vba_spec.py, build scripts
 ├── outputs/                          — Auto-saved generated files (created at runtime; not in git)
-├── database/                         — POWERBI_SETUP.md (deal-database appending disabled for now)
+├── database/                         — POWERBI_SETUP.md + db_config.json (gitignored) + local deals/ snapshots
 ├── IO/                               — Reference input/output templates (not in git)
 ├── 1 - Example GP Track Records/     — Anonymised sample GP files (not in git)
 ├── venv/                             — Private Python environment (created by the launcher)
