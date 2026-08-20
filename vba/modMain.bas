@@ -1,18 +1,17 @@
 Attribute VB_Name = "modMain"
 ' ===================================================================
-'  Entry points + orchestration for the full 8-tab build.
+'  Entry points + orchestration for the 7-tab build.
 '
-'  Prerequisite: this workbook contains a "Deal Level Inputs" sheet in
-'  the standard 28-column layout (from the Python app, pasted in, or
-'  injected by build.vbs).
-'
-'  Interactive:  Alt+F8 -> BuildAnalysisWorkbook  (dialogs)
+'  Interactive:  Alt+F8 -> ImportInputsAndBuild  (pick the app's
+'                "Gross Deal Level Input" download; imports + builds)
 '  Scripted:     build.bat / build.vbs -> BuildHeadless (no dialogs;
+'                needs the "Deal Level Inputs" sheet pasted in first;
 '                any tab failure aborts with a nonzero exit)
 '
-'  Tab order produced: Table of Contents, Deal Level Inputs,
-'  Deal List, Return & Loss Ratios, Return Dispersion, Portfolio
-'  Construction, Vintage Perf by Sector, Deployment & Exits.
+'  Tab order produced: Table of Contents, Deal List, Return & Loss
+'  Ratios, Return Dispersion, Portfolio Construction, Vintage Perf by
+'  Sector, Deployment & Exits. The imported inputs sheet and the Start
+'  page are consumed by the build; _ChartData stays as hidden staging.
 '  Each analysis tab builds inside its own error scope, so one bad
 '  tab reports instead of killing the whole run.
 ' ===================================================================
@@ -22,6 +21,7 @@ Private mDealCount As Long        ' captured before the inputs sheet is removed
 
 Public Sub BuildAnalysisWorkbook()
     Dim t0 As Double, problems As String
+    ThisWorkbook.Activate
     t0 = Timer
     problems = BuildCore()
     If Len(problems) = 0 Then
@@ -131,6 +131,26 @@ Public Sub ReplaceInputs(Optional ByVal p As String = "")
     GrantAccessToMultipleFiles Array(p)
     On Error GoTo 0
     Set wbI = Workbooks.Open(p, 0, True)
+
+    ' The picked file must actually be a Deal Level Input workbook -
+    ' picking the GP's raw track record here is an easy mistake, and it
+    ' deserves a plain answer, not 'Subscript out of range'.
+    Dim src As Worksheet
+    On Error Resume Next
+    Set src = wbI.Worksheets("Deal Level Inputs")
+    On Error GoTo 0
+    If src Is Nothing Then
+        Dim badName As String: badName = wbI.Name
+        wbI.Close False
+        MsgBox "'" & badName & "' doesn't look like a Deal Level Input " & _
+               "workbook - it has no 'Deal Level Inputs' sheet." & _
+               vbCrLf & vbCrLf & _
+               "Pick the '[date - GP] - Gross Deal Level Input.xlsx' you " & _
+               "downloaded from the app (not the GP's raw track record).", _
+               vbExclamation, "TR-Analyzer"
+        Exit Sub
+    End If
+
     Set old = Nothing
     pos = 0
     On Error Resume Next
@@ -138,8 +158,7 @@ Public Sub ReplaceInputs(Optional ByVal p As String = "")
     pos = old.Index
     On Error GoTo 0
     If Not old Is Nothing Then old.Name = "__old_inputs__"
-    wbI.Worksheets("Deal Level Inputs").Copy _
-        After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count)
+    src.Copy After:=ThisWorkbook.Worksheets(ThisWorkbook.Worksheets.Count)
     wbI.Close False
     If Not old Is Nothing Then
         Application.DisplayAlerts = False
@@ -152,10 +171,19 @@ Public Sub ReplaceInputs(Optional ByVal p As String = "")
     End If
 End Sub
 
-' One click: pick the inputs file, then build all 8 tabs.
+' One click: pick the inputs file, then build the 7 analysis tabs.
+' Activating this workbook first makes the run safe no matter which
+' workbook was frontmost when the macro was launched; the handler turns
+' any unexpected failure into a message instead of the VBA debugger.
 Public Sub ImportInputsAndBuild()
+    On Error GoTo oops
+    ThisWorkbook.Activate
     ReplaceInputs
     If SheetExists("Deal Level Inputs") Then BuildAnalysisWorkbook
+    Exit Sub
+oops:
+    Application.ScreenUpdating = True
+    MsgBox "Import failed: " & Err.Description, vbExclamation, "TR-Analyzer"
 End Sub
 
 Private Function SheetExists(ByVal name As String) As Boolean
