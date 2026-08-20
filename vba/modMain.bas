@@ -66,10 +66,13 @@ Private Function BuildCore() As String
     RunTab problems, "Deployment & Exits", "modDeployment.BuildDeployment"
     RunTab problems, "Table of Contents", "modToc.BuildTOC"
 
-    ' the inputs sheet is a transient import vehicle - consumed, then removed
+    ' the inputs sheet is a transient import vehicle - consumed, then removed;
+    ' the Start instructions page (shipped pristine workbook) goes with it,
+    ' so the finished analysis is exactly the 7 tabs
     On Error Resume Next
     Application.DisplayAlerts = False
     ThisWorkbook.Worksheets("Deal Level Inputs").Delete
+    ThisWorkbook.Worksheets("Start").Delete
     Application.DisplayAlerts = True
     On Error GoTo hardFail
 
