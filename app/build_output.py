@@ -331,9 +331,26 @@ def _write_mini_toc(ws, entries: list[tuple[str, int]], start_row: int) -> None:
                                   display=label)
 
 
+# One-line TOC description per known tab (unknown / future tabs stay blank).
+# Keep in sync with vba/modToc.bas TabBlurb.
+_TOC_BLURBS = {
+    "Deal Level Inputs": "The cleaned deal data — the single source of truth every other tab reads",
+    "Deal List": "Every deal as plain values plus the full per-deal analytics; the blue threshold tables set the bucket boundaries",
+    "Return & Loss Ratios": "Pooled MOIC and loss ratio across 15 cuts - sector, geography, vintage, fund, entry size, exit type - with a chart per cut",
+    "Return Dispersion": "MOIC and IRR distributions: deal count, % of invested capital and average return per bucket",
+    "Portfolio Construction": "Capital mix by fund x sector / geography, plus deal-count attribute breakdowns",
+    "Vintage Perf by Sector": "Invested capital, MOIC and loss ratio by vintage, with vintage x sector count and MOIC matrices",
+    "Deployment & Exits": "Capital deployment pacing (vintage x fund) and realization pacing (fund x exit year, realized deals)",
+    "Underperforming Assets": "Deals below the performance threshold, with their share of capital and value",
+    "Partner Attribution": "Returns and capital by sourcing partner",
+    "Op Performance": "Operating metrics (revenue / EBITDA growth, margins) for realized deals",
+    "Op Performance - Unrealized": "Operating metrics for the unrealized portfolio",
+}
+
+
 def _write_toc(wb) -> None:
     """Table of Contents: numbered, banded list of internal links to every
-    other tab (first sheet of the workbook)."""
+    other tab (first sheet of the workbook), each with a one-line blurb."""
     ws = wb["Table of Contents"]
     ws["B2"] = "Table of Contents"
     ws["B2"].font = Font(bold=True, size=16)
@@ -362,10 +379,15 @@ def _write_toc(wb) -> None:
         lbl.hyperlink = Hyperlink(ref=lbl.coordinate,
                                   location=f"'{sheet.title}'!A1",
                                   display=sheet.title)
+        desc = ws.cell(row=row, column=4, value=_TOC_BLURBS.get(sheet.title, ""))
+        desc.font = Font(size=10, color="595959")
+        if n % 2 == 0:
+            desc.fill = band
         row += 1
 
     ws.column_dimensions["B"].width = 4.5
     ws.column_dimensions["C"].width = 42
+    ws.column_dimensions["D"].width = 78
 
 
 def _write_inputs(ws, records: list[dict], gp: str, currency: str,

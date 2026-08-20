@@ -64,22 +64,22 @@ Private Function BuildCore() As String
     RunTab problems, "Portfolio Construction", "modConstruction.BuildPortfolioConstruction"
     RunTab problems, "Vintage Perf by Sector", "modVintage.BuildVintagePerf"
     RunTab problems, "Deployment & Exits", "modDeployment.BuildDeployment"
-    RunTab problems, "Table of Contents", "modToc.BuildTOC"
 
-    ' the inputs sheet is a transient import vehicle - consumed, then removed;
-    ' the Start instructions page (shipped pristine workbook) goes with it,
-    ' so the finished analysis is exactly the 7 tabs
+    ' Transient sheets go BEFORE the TOC builds, so the contents list shows
+    ' exactly the finished tabs (no dead rows): the inputs sheet is a
+    ' consumed import vehicle, the Start instructions page ships only in
+    ' the pristine workbook, and _ChartData is hidden staging.
     On Error Resume Next
     Application.DisplayAlerts = False
     ThisWorkbook.Worksheets("Deal Level Inputs").Delete
     ThisWorkbook.Worksheets("Start").Delete
     Application.DisplayAlerts = True
-    On Error GoTo hardFail
-
-    ArrangeSheets
-    On Error Resume Next
     ThisWorkbook.Worksheets("_ChartData").Visible = xlSheetHidden
     On Error GoTo hardFail
+
+    RunTab problems, "Table of Contents", "modToc.BuildTOC"
+
+    ArrangeSheets
 
     Application.ScreenUpdating = True
     BuildCore = problems
