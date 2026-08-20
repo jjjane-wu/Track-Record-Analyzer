@@ -62,6 +62,7 @@ package downloads (IT can allow `pypi.org`).
 | `requirements.txt` | Python components the app needs |
 | `vba/` | **This branch's focus**: the VBA analyzer — `TR-Analyzer.xlsm` (ready to use, macros only), its version-controlled module source, code generator, and build scripts (see `vba/README.md`) |
 | `User Guide.md` | How to use the app, screen by screen |
+| `TR-Analyzer User Manual.docx` | Illustrated end-to-end manual for analysts — download, setup, the full workflow, troubleshooting |
 | `WORKFLOW.md` | Technical documentation of the pipeline (for maintainers) |
 | `database/POWERBI_SETUP.md` | The cross-GP deal database (CSV snapshots → SharePoint → Power BI): how it works and how to connect |
 
@@ -76,9 +77,15 @@ is pointed at SharePoint).
 
 **This repository must never contain GP data.** All Excel/PDF files, raw GP
 submissions, generated outputs, and reference templates are excluded by
-`.gitignore` (including a blanket ban on `*.xlsx`/`*.xls`/`*.pdf`). The one
-audited exception is `vba/TR-Analyzer.xlsm` — the empty analyzer (macros +
-an instructions sheet, zero data). If `git status` ever shows it as
-*modified*, a built copy has overwritten it — restore it, never commit it.
+`.gitignore` (including a blanket ban on `*.xlsx`/`*.xls`/`*.pdf`). Two
+audited exceptions, both deliberate:
+
+- `vba/TR-Analyzer.xlsm` — the empty analyzer (macros + an instructions
+  sheet, zero data). If `git status` ever shows it as *modified*, a built
+  copy has overwritten it — restore it, never commit it.
+- `TR-Analyzer User Manual.docx` — its walkthrough screenshots show the
+  **anonymised sample** GP_2 data (maintainer's decision; the repository
+  stays private).
+
 Before any commit, run `git status` and confirm no data file is listed.
 Keep the repository **private**.
