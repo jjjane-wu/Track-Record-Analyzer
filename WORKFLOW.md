@@ -362,7 +362,7 @@ Track Record Database/
 ├── IO/                               — Reference input/output templates (not in git)
 ├── 1 - Example GP Track Records/     — Anonymised sample GP files (not in git)
 ├── venv/                             — Private Python environment (created by the launcher)
-├── start.bat / start.command / start.sh — Double-click launchers (first run = setup)
+├── start.bat / start.command      — Double-click launchers (first run = setup)
 ├── requirements.txt                  — Core dependencies
 ├── README.md                         — Repo front page + analyst setup steps
 ├── User Guide.md                     — How to use the app, screen by screen
