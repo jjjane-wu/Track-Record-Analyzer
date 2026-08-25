@@ -67,7 +67,7 @@ Public Sub BuildDeployment()
     modUtil.SectionTitle ws, anchor, TITLE_COL, titles(1)
     used = BuildDE(ws, anchor, "DE_PCT", "Vintage", "Fund", _
                    "Total Invested Capital (mlns)", "Sum of Total Invested Capital (mlns)", _
-                   xlSum, xlPercentOfColumn, "0%", False, False)
+                   xlSum, xlPercentOfColumn, "0%;-0%;", False, False)
     If used = 0 Then ws.Cells(anchor + GAP, PIVOT_COL).Value = "(no data)": used = 3
     anchor = anchor + GAP + used + 4
 
@@ -82,7 +82,7 @@ Public Sub BuildDeployment()
     modUtil.SectionTitle ws, anchor, TITLE_COL, titles(3)
     used = BuildDE(ws, anchor, "DE_XPCT", "Fund", "Exit Year", _
                    "Total IC mlns for Buckets", "Sum of Total IC mlns for Buckets", _
-                   xlSum, xlPercentOfRow, "0%", False, True)
+                   xlSum, xlPercentOfRow, "0%;-0%;", False, True)
     If used = 0 Then ws.Cells(anchor + 4, PIVOT_COL).Value = "(no realized exits in the data)": used = 5
     anchor = anchor + 4 + used + 4
 

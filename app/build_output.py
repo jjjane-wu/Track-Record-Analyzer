@@ -2378,6 +2378,10 @@ def _write_opu_sheet(ws, opu) -> None:
         start_row=8)
 
 
+# Deployment & Exits percentages: zeros display blank (empty third section)
+_DE_PCT_FMT = "0%;-0%;"
+
+
 def _write_de_sheet(ws, de) -> None:
     _ex_meta(ws, "Deployment/Pacing")
 
@@ -2414,7 +2418,7 @@ def _write_de_sheet(ws, de) -> None:
     s = secs[-1]
     _ex_cell(ws, s["hrow"], 2, s["title"]).font = _SECTION_FONT
     matrix(s["top"], 3, "Sum of Total Invested Capital (mlns)", "Fund",
-           de["vis_vintages"], de["funds"], de["ic_pct"], "0%",
+           de["vis_vintages"], de["funds"], de["ic_pct"], _DE_PCT_FMT,
            grand_row={f: 1 for f in de["funds"]})
     anchor = s["top"] + 2 + len(de["vis_vintages"]) + 4
     # 2. Deal Count — vintage rows × fund columns, with grand-total column
@@ -2434,7 +2438,7 @@ def _write_de_sheet(ws, de) -> None:
     _ex_filters(ws, [de["status_page"]], s["top"], label_col=4)
     pct_cells, pct_grand = de["exits_pct"]
     matrix(s["top"], 4, "Sum of Total IC mlns for Buckets", "Row Labels",
-           de["ex_funds"], de["vis_years"], pct_cells, "0%",
+           de["ex_funds"], de["vis_years"], pct_cells, _DE_PCT_FMT,
            grand_row=pct_grand)
     anchor = s["top"] + 2 + len(de["ex_funds"]) + 4
     # 4. Exits by Year — realized deal count by exit year (no grand column)
@@ -2588,7 +2592,7 @@ def _extra_jobs(ex: dict) -> list:
     de_pivots = [
         _bx_matrix_xml(nm(), L[0]["top"], 3, de["v_idx"], n_v, None,
                        de["f_idx"], list(range(n_f)), f_hidden,
-                       _df_xml("Sum of Total Invested Capital (mlns)", ic_idx, 9,
+                       _df_xml("Sum of Total Invested Capital (mlns)", ic_idx, 194,
                                show_as="percentOfCol"),
                        {ic_idx}, grand_col=False, row_x=de["v_row_x"],
                        extra_root=rhc),
@@ -2599,7 +2603,7 @@ def _extra_jobs(ex: dict) -> list:
                        extra_root=rhc),
         _bx_matrix_xml(nm(), L[2]["top"], 4, de["f_idx"], n_f, f_hidden,
                        de["e_idx"], de["y_col_x"], de["y_hidden"],
-                       _df_xml("Sum of Total IC mlns for Buckets", icb_idx, 9,
+                       _df_xml("Sum of Total IC mlns for Buckets", icb_idx, 194,
                                show_as="percentOfRow"),
                        {icb_idx}, pages=[de["status_page"]], grand_col=False,
                        row_x=de["f_row_x"], n_cols_all=len(de["exit_years"])),
@@ -3076,7 +3080,8 @@ def _inject_pivots(wb_bytes: bytes, records: list[dict], plan: list[dict],
     for fmt_id, code in (("217", "0.0\\x;\\(0.0\\x\\)"),
                          ("192", "0%;\\(0%\\);&quot;-&quot;"),
                          ("218", "0.0%"),
-                         ("216", "0.0\\ &quot;yrs&quot;")):
+                         ("216", "0.0\\ &quot;yrs&quot;"),
+                         ("194", "0%;-0%;")):
         if f'numFmtId="{fmt_id}"' not in st:
             fmt = f'<numFmt numFmtId="{fmt_id}" formatCode="{code}"/>'
             m = re.search(r'<numFmts count="(\d+)">', st)
