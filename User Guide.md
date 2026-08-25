@@ -149,8 +149,11 @@ inputs tab and no links back to the input file.
    per-fund currency; Realized Value shows an explicit 0 when the GP provided
    none) plus full per-deal analytics; the blue threshold tables set every
    bucket boundary (edit = instant sensitivity).
-3. **Return & Loss Ratios** — pooled MOIC + Loss Ratio across 15 cuts
-   (sector, geography, vintage, fund, size, exit, sourcing …), chart per cut.
+3. **Return & Loss Ratios** — pooled MOIC, Loss Ratio and Impaired
+   Invested Capital across 15 cuts (sector, geography, vintage, fund, size,
+   exit …), chart per cut. Loss Ratio = impaired value / invested capital
+   (how much capital is currently lost); Impaired Invested Capital =
+   capital sitting in below-1.0x deals / invested capital.
 4. **Return Dispersion** — MOIC and IRR distributions: Count, % IC, and
    average per bucket — the outlier-dependence and left-tail view.
 5. **Portfolio Construction** — capital mix by fund × sector/geography plus

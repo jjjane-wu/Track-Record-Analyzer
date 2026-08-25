@@ -114,7 +114,8 @@ _PAGE_FIELD_HEADERS = ("Fund", "Status", "Hold Period Buckets")
 
 # The Return & Loss Ratios breakdowns, in the template's order.
 # (title, axis field header, extra_datafields)
-#   extra "impaired" → Count/MOIC/Impaired Loss Ratio instead of Loss Ratio
+#   (all pivots carry Loss Ratio = Impaired Value / IC and Impaired
+#   Invested Capital = sub-1.0x IC / IC as data fields)
 #   extra "with_ic"  → adds Sum of Initial Invested Capital as a 4th data field
 PIVOT_SPECS: list[tuple[str, str, str]] = [
     ("Gross Returns & Loss Ratios by Sector",                    "Sector",                ""),
@@ -125,7 +126,7 @@ PIVOT_SPECS: list[tuple[str, str, str]] = [
     ("Gross Returns & Loss Ratios by Entry Revenue",             "Revenue Buckets",       ""),
     ("Gross Returns & Loss Ratios by Entry EBITDA",              "EBITDA Buckets",        ""),
     ("Gross Returns & Loss Ratios by Entry EBITDA Multiple",     "Entry Multiple Bucket", ""),
-    ("Impaired Loss Ratios by Entry Enterprise Value",           "Entry Enterprise\nValueBuckets", "impaired"),
+    ("Gross Returns & Loss Ratios by Entry Enterprise Value",    "Entry Enterprise\nValueBuckets", ""),
     ("Gross Returns & Loss Ratios by Vintage",                   "Vintage",               ""),
     ("Capital Deployment & Returns by Vintage",                  "Vintage",               "with_ic"),
     ("Gross Returns & Loss Ratios by Entry EBITDA Margin",       "Entry EBITDA Margin Bucket", ""),
@@ -336,10 +337,10 @@ def _write_mini_toc(ws, entries: list[tuple[str, int]], start_row: int) -> None:
 _TOC_BLURBS = {
     "Deal Level Inputs": "The cleaned deal data — the single source of truth every other tab reads",
     "Deal List": "Every deal as plain values plus the full per-deal analytics; the blue threshold tables set the bucket boundaries",
-    "Return & Loss Ratios": "Pooled MOIC and loss ratio across 15 cuts - sector, geography, vintage, fund, entry size, exit type - with a chart per cut",
+    "Return & Loss Ratios": "Pooled MOIC, Loss Ratio and Impaired Invested Capital across 15 cuts - sector, geography, vintage, fund, entry size, exit type - with a chart per cut",
     "Return Dispersion": "MOIC and IRR distributions: deal count, % of invested capital and average return per bucket",
     "Portfolio Construction": "Capital mix by fund x sector / geography, plus deal-count attribute breakdowns",
-    "Vintage Perf by Sector": "Invested capital, MOIC and loss ratio by vintage, with vintage x sector count and MOIC matrices",
+    "Vintage Perf by Sector": "Invested capital, MOIC and loss ratios by vintage, with vintage x sector count and MOIC matrices",
     "Deployment & Exits": "Capital deployment pacing (vintage x fund) and realization pacing (fund x exit year, realized deals)",
     "Underperforming Assets": "Deals below the performance threshold, with their share of capital and value",
     "Partner Attribution": "Returns and capital by sourcing partner",
@@ -580,11 +581,9 @@ def plan_pivots(records: list[dict]) -> list[dict]:
         # labelled items render; grand totals cover the visible items only
         n_axis = len(items)
         if extra == "with_ic":
-            datafields = ["ic_sum", "count", "moic", "loss"]
-        elif extra == "impaired":
-            datafields = ["count", "moic", "impaired"]
+            datafields = ["ic_sum", "count", "moic", "loss", "imp_ic"]
         else:
-            datafields = ["count", "moic", "loss"]
+            datafields = ["count", "moic", "loss", "imp_ic"]
         empty = header in _DEBUG_GROUP_DISABLE   # all-blank axes still get a pivot
         height = 1 if empty else (n_axis + 3)     # Values + header + items + grand
         plan.append({
@@ -628,15 +627,15 @@ _CHART_C0, _CHART_C1, _CHART_ROWS = 10, 21, 14
 
 
 def _pivot_graph_cols(p: dict):
-    """(count, moic, loss) column letters; loss covers the impaired variant."""
+    """(count, moic, loss) column letters for the chart source columns."""
     dfs = p["datafields"]
     col_of = lambda f: get_column_letter(4 + dfs.index(f))
-    loss_key = "impaired" if "impaired" in dfs else "loss"
-    return col_of("count"), col_of("moic"), col_of(loss_key)
+    return col_of("count"), col_of("moic"), col_of("loss")
 
 
 _DF_CAPTION = {"count": "Count", "moic": "MOIC", "loss": "Loss Ratio",
-               "impaired": "Impaired Loss Ratio", "ic_sum": "Total Invested Capital"}
+               "imp_ic": "Impaired Invested Capital",
+               "ic_sum": "Total Invested Capital"}
 _PCT_FMT = "0%"
 
 
@@ -691,7 +690,6 @@ def _render_pivot_cells(ws, plan: list[dict], records: list[dict]) -> None:
         totals = [0.0] * 6
         # capture the full-data chart series alongside (charts carry literals)
         cats, moics, losses = [], [], []
-        use_impaired = "impaired" in dfs
         for i, item in enumerate(items):
             r = top + 2 + i
             cnt, tv, ic, lo, im, ii = _stats(item)
@@ -701,7 +699,7 @@ def _render_pivot_cells(ws, plan: list[dict], records: list[dict]) -> None:
             _fill_pivot_row(ws, r, dfs, cnt, tv, ic, lo, im, ii)
             cats.append(f"{item}\n{cnt}")
             moics.append((tv / ic) if ic else None)
-            losses.append(((im if use_impaired else lo) / ic) if ic else None)
+            losses.append((im / ic) if ic else None)
         p["chart_cats"], p["chart_moic"], p["chart_loss"] = cats, moics, losses
         gr = top + 2 + len(items)
         g = ws.cell(row=gr, column=3, value="Grand Total"); g.font = Font(bold=True, size=10)
@@ -711,8 +709,8 @@ def _render_pivot_cells(ws, plan: list[dict], records: list[dict]) -> None:
 def _fill_pivot_row(ws, r, dfs, cnt, tv, ic, lo, im, ii, bold=False):
     vals = {"count": (cnt, "0"),
             "moic": ((tv / ic) if ic else None, _MOIC_FMT),
-            "loss": ((lo / ic) if ic else None, _PCT_FMT),
-            "impaired": ((im / ic) if ic else None, _PCT_FMT),
+            "loss": ((im / ic) if ic else None, _PCT_FMT),
+            "imp_ic": ((lo / ic) if ic else None, _PCT_FMT),
             "ic_sum": (ii, "#,##0")}
     for j, f in enumerate(dfs):
         v, fmt = vals[f]
@@ -749,8 +747,8 @@ def _write_rl_graphics(ws, plan: list[dict]) -> None:
 
 _CALC_FIELDS = [
     ("CalcMOIC", "'Total_x000a_Value'/'Total Invested Capital (mlns)'"),
-    ("CalcLossRatio", "'InvCapital in Loss Position'/'Total Invested Capital (mlns)'"),
-    ("CalcImpairedLossRatio", "'Impaired_x000a_Value'/'Total Invested Capital (mlns)'"),
+    ("CalcLossRatio", "'Impaired_x000a_Value'/'Total Invested Capital (mlns)'"),
+    ("CalcImpairedIC", "'InvCapital in Loss Position'/'Total Invested Capital (mlns)'"),
     # IC-weighted ratios (template cache 3/4 calc fields, verbatim semantics)
     ("CalcICWeightedRevenueCAGR", "WghtdRevCAGR/AdjInvCapRevenueCAGR"),
     ("CalcWeightedEBITDACAGR", "WghtdEBITDAcagr/AdjInvCapEBITDAcagr"),
@@ -908,7 +906,7 @@ _DF_XML = {
     "ic_sum":   '<dataField name="Total Invested Capital" fld="{ic}" baseField="0" baseItem="0"/>',
     "moic":     '<dataField name="MOIC" fld="{moic}" baseField="0" baseItem="0" numFmtId="217"/>',
     "loss":     '<dataField name="Loss Ratio" fld="{loss}" baseField="0" baseItem="0" numFmtId="9"/>',
-    "impaired": '<dataField name="Impaired Loss Ratio" fld="{imp}" baseField="0" baseItem="0" numFmtId="9"/>',
+    "imp_ic":   '<dataField name="Impaired Invested Capital" fld="{imp}" baseField="0" baseItem="0" numFmtId="9"/>',
 }
 
 
@@ -930,7 +928,7 @@ def _build_pivot_table_xml(p: dict) -> bytes:
         df_src.add(fld_ids["moic"])
     if "loss" in datafields:
         df_src.add(fld_ids["loss"])
-    if "impaired" in datafields:
+    if "imp_ic" in datafields:
         df_src.add(fld_ids["imp"])
 
     page_fields = p.get("page_fields", [])
@@ -1663,8 +1661,10 @@ def _op_hp(subset):
 
 
 def _ex_group(records, pred):
-    """(count, Σic, pooled MOIC, pooled loss ratio, Σtv) over matching records."""
-    cnt = 0; ic = tv = lo = 0.0
+    """(count, Σic, pooled MOIC, pooled Loss Ratio, Σtv, pooled Impaired
+    Invested Capital) over matching records. Loss Ratio = Σ Impaired Value
+    / Σ IC (Eric rev.); Impaired Invested Capital = Σ sub-1.0x IC / Σ IC."""
+    cnt = 0; ic = tv = lo = im = 0.0
     for rec in records:
         if not pred(rec):
             continue
@@ -1672,7 +1672,9 @@ def _ex_group(records, pred):
         ic += _cell_num(rec.get(16)) or 0.0
         tv += _cell_num(_sheet_tv(rec)) or 0.0
         lo += _cell_num(_rec_value(rec, "InvCapital in Loss Position", 0)) or 0.0
-    return cnt, ic, ((tv / ic) if ic else None), ((lo / ic) if ic else None), tv
+        im += _cell_num(_rec_value(rec, "Impaired\nValue", 0)) or 0.0
+    return (cnt, ic, ((tv / ic) if ic else None), ((im / ic) if ic else None),
+            tv, ((lo / ic) if ic else None))
 
 
 def _gn_match(rec, header, key, item):
@@ -1902,12 +1904,12 @@ def plan_extra(records: list[dict]) -> dict:
     anchor = 8 + 4 + 3
     rows = []
     for v in vintages:
-        cnt, ic, moic, loss, _tv = _ex_group(records, lambda r, v=v: in_v(r, v))
-        rows.append((v, cnt, ic, moic, loss))
+        cnt, ic, moic, loss, _tv, imp = _ex_group(records, lambda r, v=v: in_v(r, v))
+        rows.append((v, cnt, ic, moic, loss, imp))
     vs["sections"].append({
         "type": "vpivot", "title": "Invested Capital & MOIC by Vintage",
         "anchor": anchor, "top": anchor + 8, "rows": rows,
-        "total": (tot[0], tot[1], tot[2], tot[3]),
+        "total": (tot[0], tot[1], tot[2], tot[3], tot[5]),
         "axis_idx": v_idx, "n_axis": len(vintages),
         "pages": [page_spec("Fund"), page_spec("Sector"),
                   page_spec("Status"), page_spec("Hold Period Buckets")],
@@ -1919,14 +1921,14 @@ def plan_extra(records: list[dict]) -> dict:
         cells, rowt, colt = {}, {}, {}
         for v in vintages:
             for s in sectors:
-                cnt, _ic, moic, _lo, _tv = _ex_group(
+                cnt, _ic, moic, _lo, _tv, _ii = _ex_group(
                     records, lambda r, v=v, s=s: in_v(r, v) and in_s(r, s))
                 cells[(v, s)] = cnt if value == "count" else moic
         for v in vintages:
-            cnt, _ic, moic, _lo, _tv = _ex_group(records, lambda r, v=v: in_v(r, v))
+            cnt, _ic, moic, _lo, _tv, _ii = _ex_group(records, lambda r, v=v: in_v(r, v))
             rowt[v] = cnt if value == "count" else moic
         for s in sectors:
-            cnt, _ic, moic, _lo, _tv = _ex_group(records, lambda r, s=s: in_s(r, s))
+            cnt, _ic, moic, _lo, _tv, _ii = _ex_group(records, lambda r, s=s: in_s(r, s))
             colt[s] = cnt if value == "count" else moic
         sec = {"type": "vmatrix", "title": title, "value": value,
                "anchor": anchor, "top": anchor + (7 if pages else 2),
@@ -1968,7 +1970,7 @@ def plan_extra(records: list[dict]) -> dict:
     #         imp = _cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0
     #         kids.append((comp, (1, _sheet_moic(r), _cell_num(r.get(18)) or 0.0,
     #                             (imp / ic) if ic else None, _cell_num(r.get(9)))))
-    #     _cnt, fic, fmoic, _lo, _tv = _ex_group(loss_recs, lambda r, f=f: in_f(r, f))
+    #     _cnt, fic, fmoic, _lo, _tv, _ii = _ex_group(loss_recs, lambda r, f=f: in_f(r, f))
     #     cur = sum(_cell_num(r.get(18)) or 0.0 for r in frecs)
     #     imp = sum(_cell_num(_rec_value(r, "Impaired\nValue", 0)) or 0.0 for r in frecs)
     #     hps = [_cell_num(r.get(9)) for r in frecs if _cell_num(r.get(9)) is not None]
@@ -2003,7 +2005,7 @@ def plan_extra(records: list[dict]) -> dict:
     # pa_pos = {v: i for i, v in enumerate(partners_cache)}
     # pa_rows = []
     # for p in partners:
-    #     cnt, _ic, moic, _lo, _tv = _ex_group(
+    #     cnt, _ic, moic, _lo, _tv, _ii = _ex_group(
     #         records, lambda r, p=p: _cell_str(r.get(pa_key)) == p)
     #     pa_rows.append((p, cnt, moic))
     # ex["Partner Attribution"] = {
@@ -2182,25 +2184,28 @@ def _write_vs_sheet(ws, vs) -> None:
             _ex_filters(ws, s["pages"], top)
             _ex_cell(ws, top, 4, "Values")
             _ex_cell(ws, top + 1, 3, "Row Labels")
-            for j, h in enumerate(("Count", "Invested Capital", "MOIC", "Loss Ratio")):
+            for j, h in enumerate(("Count", "Invested Capital", "MOIC",
+                                   "Loss Ratio", "Impaired Invested Capital")):
                 _ex_cell(ws, top + 1, 4 + j, h)
             _ex_cell(ws, top + 1, 9, "Graph Label", bold=True)
-            for i, (v, cnt, ic, moic, loss) in enumerate(s["rows"]):
+            for i, (v, cnt, ic, moic, loss, imp) in enumerate(s["rows"]):
                 r = top + 2 + i
                 _ex_cell(ws, r, 3, v)
                 _ex_cell(ws, r, 4, cnt, "0")
                 _ex_cell(ws, r, 5, ic, _EX_MONEY_FMT)
                 _ex_cell(ws, r, 6, moic, _MOIC_FMT)
                 _ex_cell(ws, r, 7, loss, "0%")
+                _ex_cell(ws, r, 8, imp, "0%")
                 ws.cell(row=r, column=9,
                         value=f"=CONCATENATE(C{r},CHAR(10),D{r})")
             gr = top + 2 + len(s["rows"])
             _ex_cell(ws, gr, 3, "Grand Total", bold=True)
-            tc, ti, tm, tl = s["total"]
+            tc, ti, tm, tl, tii = s["total"]
             _ex_cell(ws, gr, 4, tc, "0", True)
             _ex_cell(ws, gr, 5, ti, _EX_MONEY_FMT, True)
             _ex_cell(ws, gr, 6, tm, _MOIC_FMT, True)
             _ex_cell(ws, gr, 7, tl, "0%", True)
+            _ex_cell(ws, gr, 8, tii, "0%", True)
         else:
             if s["pages"]:
                 _ex_filters(ws, s["pages"], top)
@@ -2460,7 +2465,7 @@ def _extra_jobs(ex: dict) -> list:
     hp_idx = _dl_field_index("Hold\nPeriod")
     icb_idx = _dl_field_index("Total IC mlns for Buckets")
     cm, cl = dims["calc_moic"], dims["calc_loss"]
-    ci = cl + 1                                   # CalcImpairedLossRatio
+    ci = cl + 1                                   # CalcImpairedIC
 
     # ── Vintage Perf by Sector ───────────────────────────────────────────
     vs = ex["Vintage Perf by Sector"]
@@ -2472,16 +2477,17 @@ def _extra_jobs(ex: dict) -> list:
             dfs = [_df_xml("Count", 0, 1, subtotal="count"),
                    _df_xml("Invested Capital", ic_idx, 3),
                    _df_xml("MOIC", cm, 217),
-                   _df_xml("Loss Ratio", cl, 9)]
+                   _df_xml("Loss Ratio", cl, 9),
+                   _df_xml("Impaired Invested Capital", ci, 9)]
             pivots.append(_bx_axis_pivot_xml(
                 nm(), s["top"], 3, s["axis_idx"], s["n_axis"], None,
-                s["pages"], dfs, {0, ic_idx, cm, cl}))
-            cats = [f"{v}\n{cnt}" for v, cnt, _ic, _m, _l in s["rows"]]
+                s["pages"], dfs, {0, ic_idx, cm, cl, ci}))
+            cats = [f"{v}\n{cnt}" for v, cnt, _ic, _m, _l, _ii in s["rows"]]
             cx = (vint_tpl
                   .replace("{CATS}", _str_lit(cats))
-                  .replace("{VBAR}", _num_lit([ic for _v, _c, ic, _m, _l in s["rows"]],
+                  .replace("{VBAR}", _num_lit([ic for _v, _c, ic, _m, _l, _ii in s["rows"]],
                                               _EX_MONEY_FMT))
-                  .replace("{VLINE}", _num_lit([m for _v, _c, _ic, m, _l in s["rows"]],
+                  .replace("{VLINE}", _num_lit([m for _v, _c, _ic, m, _l, _ii in s["rows"]],
                                                "0.0\\x;\\(0.0\\x\\)"))
                   .replace("{TITLE}", _esc(s["title"])))
             charts.append((cx, 10, max(s["top"] - 2, 0), 11, 14))

@@ -1,9 +1,10 @@
 Attribute VB_Name = "modPivots"
 ' ===================================================================
 '  Return & Loss Ratios -- 15 native pivots (PIVOT_SPECS order) with
-'  Count / MOIC / Loss-Ratio calculated fields, report filters, bucket
-'  ordering, hidden blanks, and a static combo chart per breakdown
-'  (columns = MOIC, line = Loss Ratio; snapshot, never filter-linked).
+'  Count / MOIC / Loss Ratio / Impaired Invested Capital calculated
+'  fields, report filters, bucket ordering, hidden blanks, and a static
+'  combo chart per breakdown (columns = MOIC, line = Loss Ratio =
+'  Impaired Value over IC; snapshot, never filter-linked).
 ' ===================================================================
 Option Explicit
 
@@ -31,13 +32,12 @@ Private Function BuildOnePivot(ws As Worksheet, ByVal anchor As Long, ByVal idx 
         End If
         modUtil.AddData pt, "Company", "Count", xlCount, "0"
         modUtil.AddData pt, "CalcMOIC", "MOIC", xlSum, "0.0\x;(0.0\x)"
-        If variant_ = "impaired" Then
-            modUtil.AddData pt, "CalcImpairedLossRatio", "Impaired Loss Ratio", xlSum, "0.0%"
-        Else
-            modUtil.AddData pt, "CalcLossRatio", "Loss Ratio", xlSum, "0.0%"
-        End If
-        .ColumnGrand = False
-        .RowGrand = True
+        modUtil.AddData pt, "CalcLossRatio", "Loss Ratio", xlSum, "0.0%"
+        modUtil.AddData pt, "CalcImpairedIC", "Impaired Invested Capital", xlSum, "0.0%"
+        ' ColumnGrand=True is the bottom Grand Total ROW (Excel names
+        ' these inversely: grand totals FOR columns); no right-hand column
+        .ColumnGrand = True
+        .RowGrand = False
     End With
     modUtil.HideBlank pt, axisField
     modUtil.ApplyCanonicalOrder pt, axisField
@@ -50,11 +50,7 @@ Private Function BuildOnePivot(ws As Worksheet, ByVal anchor As Long, ByVal idx 
         ReDim vMoic(1 To cats.Count): ReDim vLoss(1 To cats.Count)
         For i = 1 To cats.Count
             vMoic(i) = modCharts.PivotVal(pt, "MOIC", axisField, CStr(cats(i)))
-            If variant_ = "impaired" Then
-                vLoss(i) = modCharts.PivotVal(pt, "Impaired Loss Ratio", axisField, CStr(cats(i)))
-            Else
-                vLoss(i) = modCharts.PivotVal(pt, "Loss Ratio", axisField, CStr(cats(i)))
-            End If
+            vLoss(i) = modCharts.PivotVal(pt, "Loss Ratio", axisField, CStr(cats(i)))
         Next i
         modCharts.ComboChart ws, anchor + GAP, CHART_COL, ws.Cells(anchor, TITLE_COL).Value, _
             cats, vMoic, "MOIC", "0.0""x""", vLoss, "Loss Ratio", "0%"

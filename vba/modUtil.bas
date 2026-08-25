@@ -31,10 +31,13 @@ Public Sub AddCalcFields(pt As PivotTable)
     On Error Resume Next
     pt.CalculatedFields.Add "CalcMOIC", _
         "='Total" & NL() & "Value'/'Total Invested Capital (mlns)'", True
+    ' Loss Ratio (Eric rev.) = Impaired Value / Total Invested Capital;
+    ' Impaired Invested Capital = capital in sub-1.0x deals / total capital
+    ' (the metric previously displayed as "Loss Ratio").
     pt.CalculatedFields.Add "CalcLossRatio", _
-        "='InvCapital in Loss Position'/'Total Invested Capital (mlns)'", True
-    pt.CalculatedFields.Add "CalcImpairedLossRatio", _
         "='Impaired" & NL() & "Value'/'Total Invested Capital (mlns)'", True
+    pt.CalculatedFields.Add "CalcImpairedIC", _
+        "='InvCapital in Loss Position'/'Total Invested Capital (mlns)'", True
     On Error GoTo 0
 End Sub
 

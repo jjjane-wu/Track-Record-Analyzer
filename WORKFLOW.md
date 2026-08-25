@@ -235,9 +235,11 @@ tabs, in order (four further tabs are currently switched off — see below):
 4. **Return & Loss Ratios** — 15 real pivots in template order (Sector,
    Geography, Process Type, GP Role, Exit Type, Revenue/EBITDA/Multiple/EV/
    Margin/IC buckets, Vintage ×2, COI, Fund), each with Count / MOIC /
-   Loss-Ratio data fields (plus the Impaired and Capital-Deployment
-   variants), Graph Label cells, and a combo chart (MOIC columns + Loss-Ratio
-   line) cloned from the template's own chart XML.
+   **Loss Ratio** (= Impaired Value / Total Invested Capital) / **Impaired
+   Invested Capital** (= sub-1.0x invested capital / total — the metric
+   formerly displayed as "Loss Ratio") data fields, plus the
+   Capital-Deployment variant, Graph Label cells, and a combo chart (MOIC
+   columns + Loss-Ratio line) cloned from the template's own chart XML.
 
 5. **Return Dispersion** — Gross MOIC and Gross IRR dispersion sections:
    bucket pivots showing Count and **% IC** (share of invested capital,
@@ -252,8 +254,8 @@ tabs, in order (four further tabs are currently switched off — see below):
    as regular pivots with identical output.)
 
 7. **Vintage Perf by Sector** — vintage pivot (Count / Invested Capital /
-   MOIC / Loss Ratio, four report filters, combo chart) + three
-   vintage × sector matrices (counts and pooled MOIC).
+   MOIC / Loss Ratio / Impaired Invested Capital, four report filters,
+   combo chart) + three vintage × sector matrices (counts and pooled MOIC).
 
 8. **Deployment & Exits** — four pivots, template-verbatim: InvCap % and
     Deal Count by vintage × fund (deployment pacing), then Exits % of IC by

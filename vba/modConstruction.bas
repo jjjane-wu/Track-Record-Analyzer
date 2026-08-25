@@ -28,8 +28,8 @@ Private Function BuildMatrix(ws As Worksheet, ByVal anchor As Long, _
                                "% of Fund Capital", xlSum)
         df.Calculation = xlPercentOfRow
         df.NumberFormat = "0%;(0%);""-"""
-        .ColumnGrand = False                    ' each row sums to 100% anyway
-        .RowGrand = True
+        .ColumnGrand = True                     ' bottom Grand Total row
+        .RowGrand = False                       ' no 100% right column
     End With
     modUtil.HideBlank pt, "Fund"
     modUtil.HideBlank pt, colField
@@ -65,8 +65,8 @@ Private Function BuildCount(ws As Worksheet, ByVal anchor As Long, _
         .PivotFields(dimField).Orientation = xlRowField
         modUtil.AddData pt, "Company", "Count of Company", xlCount, "0"
         .PivotFields(dimField).AutoSort xlDescending, "Count of Company"
-        .ColumnGrand = False
-        .RowGrand = True
+        .ColumnGrand = True     ' bottom Grand Total row
+        .RowGrand = False
     End With
     modUtil.HideBlank pt, dimField
 

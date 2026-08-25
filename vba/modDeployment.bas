@@ -32,8 +32,8 @@ Private Function BuildDE(ws As Worksheet, ByVal anchor As Long, ByVal ptName As 
         Set df = .AddDataField(.PivotFields(dataField), caption, how)
         If calc <> 0 Then df.Calculation = calc
         If Len(fmt) > 0 Then df.NumberFormat = fmt
-        .ColumnGrand = grandCol
-        .RowGrand = True
+        .ColumnGrand = True     ' bottom Grand Total row
+        .RowGrand = grandCol    ' right-hand grand column where wanted
     End With
     If realizedOnly Then modUtil.SelectPage pt, "Status", "Realized"
     modUtil.HideBlank pt, rowField

@@ -28,7 +28,7 @@ raw GP file ──► Python app (parse + map, unchanged)
 | `modBuild.bas` | Builds the Deal List: meta, bucket helper tables, tag row, `DealLevelInput` table, all column formulas (same `in:/in0:/F:/FT:` notation as Python). |
 | `modUtil.bas` | Shared plumbing: the one pivot cache, calculated fields, meta blocks, report filters, canonical bucket ordering, blank-hiding, mini contents lists. |
 | `modCharts.bas` | Static snapshot charts: pivot values are copied via `GetPivotData` into a hidden `_ChartData` sheet right after each (still unfiltered) pivot is built, and plain charts are drawn over that block — so filtering a pivot never changes a chart, same rule as the Python build. |
-| `modPivots.bas` | Return & Loss Ratios: 15 native pivots (Count / pooled MOIC / Loss Ratio, report filters, bucket order, hidden blanks) + a combo chart each. |
+| `modPivots.bas` | Return & Loss Ratios: 15 native pivots (Count / pooled MOIC / Loss Ratio / Impaired Invested Capital, report filters, bucket order, hidden blanks) + a combo chart each. |
 | `modDispersion.bas` | Return Dispersion: MOIC + IRR bucket pivots (Count / % IC / actual average) + % IC column charts (n/a bucket excluded from charts). |
 | `modConstruction.bas` | Portfolio Construction: two Fund × Sector/Geography %-of-row matrices with stacked charts, five deal-count pivots with pies, total count. |
 | `modVintage.bas` | Vintage Perf by Sector: the vintage performance pivot (4 filters, combo chart) + three Vintage × Sector matrices (counts and pooled MOIC). |

@@ -28,8 +28,8 @@ Private Function BuildSection(ws As Worksheet, ByVal anchor As Long, _
         df.Calculation = xlPercentOfColumn
         df.NumberFormat = "0%"
         modUtil.AddData pt, metricField, avgCaption, xlAverage, avgFmt
-        .ColumnGrand = False
-        .RowGrand = True
+        .ColumnGrand = False    ' reference layout: no grand totals here
+        .RowGrand = False
     End With
     modUtil.HideBlank pt, bucketField
     modUtil.ApplyCanonicalOrder pt, bucketField

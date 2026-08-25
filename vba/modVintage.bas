@@ -1,7 +1,8 @@
 Attribute VB_Name = "modVintage"
 ' ===================================================================
 '  Vintage Perf by Sector -- the vintage performance pivot (Count /
-'  Invested Capital / MOIC / Loss Ratio, four report filters, combo
+'  Invested Capital / MOIC / Loss Ratio / Impaired Invested Capital,
+'  four report filters, combo
 '  chart) plus three Vintage x Sector matrices: deal count, pooled
 '  MOIC (calculated field = correct pooled math per cell), and deal
 '  count with a Fund filter. Mirrors plan_extra's VS sections.
@@ -30,8 +31,9 @@ Private Function BuildVPivot(ws As Worksheet, ByVal anchor As Long) As Long
         modUtil.AddData pt, "Total Invested Capital (mlns)", "Invested Capital", xlSum, "#,##0"
         modUtil.AddData pt, "CalcMOIC", "MOIC", xlSum, "0.0\x;(0.0\x)"
         modUtil.AddData pt, "CalcLossRatio", "Loss Ratio", xlSum, "0.0%"
-        .ColumnGrand = False
-        .RowGrand = True
+        modUtil.AddData pt, "CalcImpairedIC", "Impaired Invested Capital", xlSum, "0.0%"
+        .ColumnGrand = True     ' bottom Grand Total row
+        .RowGrand = False
     End With
 
     ' combo chart: invested capital columns + MOIC line
