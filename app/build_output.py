@@ -83,6 +83,11 @@ _CALC_FONT = Font(size=10)
 _GRAY_COLS = {"Total\nValue", "Gross\nMOIC", "Performing\n(1=Underperform)",
               "InvCapital in Loss Position", "Impaired\nValue"}
 
+# Deal List identity columns styled as inputs (threshold-table light blue),
+# per user request — mirrors modBuild.bas.
+_DL_IDENTITY_BLUE = {"Company", "Fund", "Fund Currency", "Vintage", "Status",
+                     "Inv. Date"}
+
 
 # The Deal List schema is the template's own 80-column layout (see
 # deal_list_spec.py, extracted verbatim from the Segmented Analysis template).
@@ -507,12 +512,12 @@ def _write_deal_list(ws, records: list[dict], gp: str,
             fmt = DL_FORMATS.get(j)
             if fmt:
                 cell.number_format = fmt
-            # every Deal List data cell is a formula (links included) — plain
-            # white/black; the only blue "input" cells on this tab are the
-            # bucket-threshold numbers in the header block
             if hdr in _GRAY_COLS:               # key computed columns — grey
                 cell.font = _CALC_FONT
                 cell.fill = _GRAY_FILL
+            elif hdr in _DL_IDENTITY_BLUE:      # identity columns — input blue
+                cell.font = _INPUT_BLUE
+                cell.fill = _INPUT_FILL
             else:
                 cell.font = _CALC_FONT
 
