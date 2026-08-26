@@ -198,6 +198,12 @@ class GPParserPipeline:
             use_semantic=self.use_semantic,
         )
 
+        # ── Stage 3.4: Fund-section inheritance ────────────────────────────────
+        # Some GPs carry no fund column: the deal table is divided into
+        # sections, each headed by a row holding the fund's name in the
+        # company column and nothing else. Deals inherit the banner above.
+        _inherit_fund_sections(table, schema, all_warnings)
+
         # ── Stage 3.5: Combined-frame cleanup (per-fund only) ──────────────────
         # Supply a fund column from the tab name when the data lacks one, then
         # drop deals that appear in more than one tab (safety against a file that
@@ -229,6 +235,107 @@ class GPParserPipeline:
             warnings=all_warnings,
             table_group=group,
         )
+
+
+# Aggregate-view section headings ("All Investments Since 2012",
+# "Software & Services (2001 - Present)") share the banner shape but name a
+# summary cut, not a fund.
+_AGGREGATE_HEADING_RE = re.compile(
+    r"^\s*all\b"
+    r"|\(\s*\d{4}\s*[-–—]\s*(\d{4}|present|current|today)\s*\)",
+    re.IGNORECASE,
+)
+
+
+def _looks_like_note_header(v) -> bool:
+    """Rows that share the banner shape but aren't fund names: bare 'Notes'
+    headings, parenthesised footnote references like '(1) …', prose, and
+    aggregate-view headings."""
+    s = str(v or "").strip()
+    return bool(re.match(r"^\s*(notes?|footnotes?)\s*:?\s*$", s, re.IGNORECASE)
+                or s.startswith("(")
+                or len(s) > 80 or len(s.split()) > 10    # prose, not a name
+                or _AGGREGATE_HEADING_RE.search(s))
+
+
+FUND_SECTION_COL = "__fund_section__"
+
+# Trailing "(vintage …)" on a fund banner is metadata, not part of the name.
+_VINTAGE_TAIL_RE = re.compile(r"\s*\(\s*vintage[^)]*\)\s*$", re.IGNORECASE)
+
+
+def _inherit_fund_sections(
+    table: ExtractedTable,
+    schema: SchemaInference,
+    warnings: list[str],
+) -> None:
+    """
+    Stage 3.4 — fund names as section banners inside the company column.
+
+    Structural signal only: a banner row has text in the company column and
+    every other cell blank (and doesn't look like a footnote or total).
+    Deals below a banner inherit it as their fund, until the next banner.
+    Engages only when inference found no usable fund column — the per-tab
+    synthetic fallback doesn't count; a real mapped fund column always wins.
+    Banner rows themselves are removed from the deal set. Tabs (or leading
+    rows) without banners keep the tab-name fallback where one exists.
+    """
+    df = table.df
+    comp = schema.field_to_col.get("company")
+    if df.empty or not comp or comp not in df.columns:
+        return
+    fund_col = schema.field_to_col.get("fund")
+    if (
+        fund_col
+        and fund_col in df.columns
+        and fund_col != FUND_FROM_TAB_COL
+        and df[fund_col].map(lambda v: not _is_blank(v)).mean() > 0.5
+    ):
+        return                                     # real fund data exists
+
+    other_cols = [c for c in df.columns if c not in (comp, FUND_FROM_TAB_COL)]
+    if not other_cols:
+        return
+
+    comp_vals = df[comp]
+    others_blank = df[other_cols].apply(lambda col: col.map(_is_blank)).all(axis=1)
+    is_banner = (
+        comp_vals.map(lambda v: not _is_blank(v))
+        & others_blank
+        & ~comp_vals.map(_looks_like_annotation)
+        & ~comp_vals.map(_looks_like_note_header)
+    )
+    if not is_banner.any():
+        return
+
+    section = comp_vals.where(is_banner).map(
+        lambda v: v if _is_blank(v) else _VINTAGE_TAIL_RE.sub("", str(v).strip()))
+    if FUND_FROM_TAB_COL in df.columns:
+        section = section.groupby(df[FUND_FROM_TAB_COL], sort=False).ffill()
+    else:
+        section = section.ffill()
+    if not (section.notna() & ~is_banner).any():
+        return                                     # banners head no deals
+
+    df = df.copy()
+    if FUND_FROM_TAB_COL in df.columns:
+        section = section.where(section.notna(), df[FUND_FROM_TAB_COL])
+    df[FUND_SECTION_COL] = section
+    n_banners = int(is_banner.sum())
+    table.df = df.loc[~is_banner].reset_index(drop=True)
+    table.row_count = len(table.df)
+    schema.field_to_col["fund"] = FUND_SECTION_COL
+    schema.confidences["fund"] = max(schema.confidences.get("fund", 0.0), 0.92)
+    schema.explanations["fund"] = [
+        f"inherited from {n_banners} fund section banner(s) in the "
+        f"'{comp}' column"
+    ]
+    if FUND_SECTION_COL in schema.unmapped_cols:
+        schema.unmapped_cols.remove(FUND_SECTION_COL)
+    warnings.append(
+        f"Fund identity: {n_banners} section banner row(s) in the '{comp}' "
+        f"column were promoted to fund names for the deals beneath them."
+    )
 
 
 def _apply_fund_fallback_and_dedup(
