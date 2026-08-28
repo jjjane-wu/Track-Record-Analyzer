@@ -51,7 +51,7 @@ from deal_list_spec import DL_COLS, DL_FORMATS, HEADER_BLOCK, TAG_ROW
 
 # Deal Level Inputs: (header, transformer record key).
 INPUT_COLS: list[tuple[str, Any]] = [
-    ("Company", 1), ("Fund", 2), ("Status", 5), ("Fund Currency", 90),
+    ("Company", 1), ("Fund", 2), ("Status", 5), ("Deal Currency", 90),
     ("Inv. Date", 6), ("Exit Date", 7),
     ("Sector", 11), ("Geography", 12), ("Total Invested Capital (mlns)", 16),
     ("Realized\nValue", 17), ("Current\nValue", 18), ("Transaction Type", 29),
@@ -85,7 +85,7 @@ _GRAY_COLS = {"Total\nValue", "Gross\nMOIC", "Performing\n(1=Underperform)",
 
 # Deal List identity columns styled as inputs (threshold-table light blue),
 # per user request — mirrors modBuild.bas.
-_DL_IDENTITY_BLUE = {"Company", "Fund", "Fund Currency", "Vintage", "Status",
+_DL_IDENTITY_BLUE = {"Company", "Fund", "Deal Currency", "Vintage", "Status",
                      "Inv. Date"}
 
 
@@ -3138,7 +3138,7 @@ def build_output(records: list[dict], gp_name: str, currency: str = "USD",
     errs = phase_errors if phase_errors is not None else []
     for rec in records:                        # EWL defaults
         if not _cell_str(rec.get(90)):
-            rec[90] = currency                 # Fund Currency
+            rec[90] = currency                 # Deal Currency
         if _cell_num(rec.get(17)) is None:
             rec[17] = 0.0                      # Realized Value: 0 if missing
     wb = openpyxl.Workbook()

@@ -146,7 +146,7 @@ inputs tab and no links back to the input file.
 
 1. **Table of Contents** — navigation.
 2. **Deal List** — the imported deal data (28 standard columns, incl. a
-   per-fund currency; Realized Value shows an explicit 0 when the GP provided
+   per-deal currency; Realized Value shows an explicit 0 when the GP provided
    none) plus full per-deal analytics; the blue threshold tables set every
    bucket boundary (edit = instant sensitivity).
 3. **Return & Loss Ratios** — pooled MOIC, Loss Ratio and Impaired

@@ -51,9 +51,15 @@ _DATE_KEYS    = {6, 7}
 _ALLOWED_STATUS = {"realized", "unrealized"}
 
 
+# Old column names that later releases renamed — normalised on read so
+# previously downloaded input files keep working everywhere.
+_LEGACY_HEADERS = {"fund currency": "Deal Currency"}
+
+
 def _clean_header(h: Any) -> str:
     """Collapse newlines/extra spaces: 'Realized\\nValue' -> 'Realized Value'."""
-    return " ".join(str(h).split()) if h is not None else ""
+    out = " ".join(str(h).split()) if h is not None else ""
+    return _LEGACY_HEADERS.get(out.lower(), out)
 
 
 # Cleaned expected headers, in schema order, with their record keys.
@@ -197,7 +203,7 @@ def validate(parsed: ParsedInput) -> tuple[list[str], list[str]]:
     if not parsed.rows:
         errors.append("No deal rows found below the header row.")
     if not parsed.currency:
-        warnings.append("Currency is missing (cell C5) — Fund Currency blanks "
+        warnings.append("Currency is missing (cell C5) — Deal Currency blanks "
                         "cannot be back-filled.")
 
     def col_of(key: int) -> str | None:
@@ -299,7 +305,7 @@ def to_long_table(parsed: ParsedInput,
                   published_at: datetime | None = None) -> pd.DataFrame:
     """One row per deal; GP/as-of stamped on every row; tidy typed columns."""
     published_at = published_at or datetime.now()
-    fc_col = next((h for h, k in EXPECTED_HEADERS if k == 90), "Fund Currency")
+    fc_col = next((h for h, k in EXPECTED_HEADERS if k == 90), "Deal Currency")
 
     out_rows: list[dict[str, Any]] = []
     for row in parsed.rows:

@@ -194,7 +194,7 @@ Public Sub BuildDealList()
             ws.Range(ws.Cells(DL_DATA_ROW, FIRST_COL + i - 1), _
                      ws.Cells(lastRow, FIRST_COL + i - 1)).Interior.Color = RGB(242, 242, 242)
         ElseIf h(i) = "Company" Or h(i) = "Fund" _
-           Or h(i) = "Fund Currency" Or h(i) = "Vintage" _
+           Or h(i) = "Deal Currency" Or h(i) = "Vintage" _
            Or h(i) = "Status" Or h(i) = "Inv. Date" Then
             ' identity columns styled as inputs (same light blue as the
             ' bucket threshold tables), per user request

@@ -40,7 +40,7 @@ TEMPLATE_FIELDS: list[dict] = [
     {"id": "holding_period",  "label": "Hold Period",     "aliases": ["holding period", "hold period", "years held", "duration"],                                                                     "value_hint": "decimal_years"},
     {"id": "ic_initial",  "label": "Initial Fund Equity Invested (m)", "aliases": ["initial fund equity invested", "initial equity invested", "initial invested", "equity invested initial", "initial equity", "initial fund equity"]},
     {"id": "ic_total",    "label": "Total Fund Equity Invested (m)",   "aliases": ["total fund equity invested", "total invested", "total equity invested", "invested capital", "investment cost", "cost of investment", "current investment cost", "final investment cost"]},
-    {"id": "fund_currency", "label": "Fund Currency",                    "aliases": ["fund currency", "currency", "ccy", "fund ccy", "local currency", "reporting currency", "deal currency"]},
+    {"id": "fund_currency", "label": "Deal Currency",                    "aliases": ["fund currency", "currency", "ccy", "fund ccy", "local currency", "reporting currency", "deal currency"]},
     {"id": "realized",    "label": "Realized Value (m)",                "aliases": ["realized value", "realised value", "realization proceeds", "exit proceeds", "total realized", "realization"]},
     {"id": "unrealized",  "label": "Unrealized Value (m)",              "aliases": ["unrealized value", "unrealised value", "current value", "fair value", "nav", "current equity value"]},
     {"id": "total_value", "label": "Total Value (m)",                   "aliases": ["total value", "total fund value", "gross value"]},

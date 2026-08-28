@@ -22,7 +22,7 @@ linked-input model (links return "" for blanks, ISBLANK() cannot see them):
 DL_COLS: list[tuple[str, str, int, str]] = [
     ('Company', 'in:Company', 1, 'g'),
     ('Fund', 'in:Fund', 2, 'g'),
-    ('Fund Currency', 'in:Fund Currency', 90, 'g'),
+    ('Deal Currency', 'in:Deal Currency', 90, 'g'),
     ('Vintage', 'F:IF((DealLevelInput[[#This Row],[Inv. Date]]=""),"n/a",YEAR(G{r}))', 4, 'gn'),
     ('Status', 'in:Status', 5, 'g'),
     ('Inv. Date', 'in:Inv. Date', 6, 'dt'),
