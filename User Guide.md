@@ -81,7 +81,7 @@ flows through everything. Click **Generate Analysis →**.
 
 The tool builds the hand-off file. What you see:
 
-- **Summary metrics** — GP_2: 90 deals, 38 realized, 6 funds.
+- **Summary metrics** — GP_2: 89 deals, 38 realized, 6 funds.
 - **Unit conversion notice** — appears only when the tool had to rescale:
   GP_2 already reports in millions, so nothing shows; upload a GP reporting
   in thousands or absolute dollars and a banner lists exactly which columns
@@ -176,13 +176,13 @@ For metric definitions and how to read them, see **Metric Guide.md**.
 - **Blue = type here. White = calculated. Grey = key result.**
 - **Every pivot has report filters** (Fund / Status / Hold-Period buckets;
   the operating tabs add Sector). Status = *Realized* is the acid test
-  (GP_2: recalculates from 90 deals to 38) — the track record in cash terms,
+  (GP_2: recalculates from 89 deals to 38) — the track record in cash terms,
   with the GP's own marks stripped out.
 - **Charts never change** — they're fixed snapshots of the full portfolio
   (blank / n/a categories are left off the charts); the pivots are for
   exploring.
 - **Deals missing a label are hidden from that pivot and its totals** — GP_2
-  has 9 deals with no sector, so the Sector pivot totals 81, not 90. Nothing
+  has 8 deals with no sector, so the Sector pivot totals 81, not 89. Nothing
   is deleted: un-hide via the pivot's filter dropdown. Missing MOIC/IRR shows
   as an "n/a" bucket.
 - The filename really has square brackets — Excel's title bar just displays

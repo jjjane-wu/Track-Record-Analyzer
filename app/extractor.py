@@ -289,6 +289,63 @@ def _derive_fund_labels(sheet_names: list[str]) -> dict[str, str]:
     return labels
 
 
+# Trailing footnote markers on a header: "(5)", "*", "†", superscript digits.
+# Only pure-digit parentheticals are footnotes — "(mm/dd/yyyy)", "(mlns)" and
+# other lettered parentheticals are real content and must survive.
+_FOOTNOTE_TAIL_RE = re.compile(r"(?:\s*\(\d{1,2}\)|\s*[*†‡¹²³⁴⁵⁶⁷⁸⁹⁰])+\s*$")
+
+
+def _footnote_key(name: Any) -> str:
+    """Case/whitespace-insensitive header identity with footnote tails removed."""
+    s = re.sub(r"\s+", " ", str(name)).strip()
+    return _FOOTNOTE_TAIL_RE.sub("", s).strip().lower()
+
+
+def _align_footnote_variant_columns(
+    frames: list[pd.DataFrame], warnings: list[str]
+) -> None:
+    """
+    Rename columns in-place so tabs whose headers differ only by a footnote
+    marker ("Initial Investment Date (5)" vs "Initial Investment Date") align
+    into ONE column when concatenated, instead of fragmenting into several
+    sparsely-filled ones.
+
+    The canonical display name for each group is the marker-free variant when
+    one exists, else the first variant seen. A key that maps to two different
+    columns WITHIN a single tab is left untouched — those are genuinely
+    distinct columns and merging them would destroy data.
+    """
+    variants: dict[str, list[str]] = {}          # key -> distinct raw names, in order
+    unsafe: set[str] = set()
+    for df_i in frames:
+        seen_in_frame: dict[str, str] = {}
+        for col in df_i.columns:
+            key = _footnote_key(col)
+            if key in seen_in_frame and seen_in_frame[key] != str(col):
+                unsafe.add(key)                  # two same-key columns in one tab
+            seen_in_frame.setdefault(key, str(col))
+            names = variants.setdefault(key, [])
+            if str(col) not in names:
+                names.append(str(col))
+
+    renames: dict[str, str] = {}
+    for key, names in variants.items():
+        if key in unsafe or len(names) < 2:
+            continue
+        clean = [n for n in names if _footnote_key(n) == re.sub(r"\s+", " ", n).strip().lower()]
+        canonical = clean[0] if clean else names[0]
+        for n in names:
+            if n != canonical:
+                renames[n] = canonical
+
+    if not renames:
+        return
+    for df_i in frames:
+        df_i.rename(columns=renames, inplace=True)
+    merged = ", ".join(f"'{a}' → '{b}'" for a, b in sorted(renames.items()))
+    warnings.append(f"Aligned footnote-variant headers across tabs: {merged}")
+
+
 def _extract_one_df(file_bytes: bytes, table: TableCandidate) -> pd.DataFrame:
     """Parse a single TableCandidate into a DataFrame using profiler hints."""
     table_hint = {
@@ -345,6 +402,7 @@ def extract_tables(
             row_count=0, col_count=0, warnings=warnings,
         )
 
+    _align_footnote_variant_columns(frames, warnings)
     combined = pd.concat(frames, ignore_index=True, sort=False)
 
     col_profiles: list[ColumnProfile] = []

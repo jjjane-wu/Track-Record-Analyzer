@@ -443,6 +443,17 @@ def _looks_like_annotation(v) -> bool:
     return bool(_ANNOTATION_RE.search(s) or _TOTAL_RE.match(s))
 
 
+# A company cell holding ONLY a documentation heading ("Notes", "Source:") or
+# opening with a numbered footnote marker ("(3) Includes …"). Both only mark a
+# row as junk together with the no-date/no-financials guard in stage 3.6 — a
+# real deal named like this would carry data and survive.
+_NOTE_WORD_RE = re.compile(
+    r"^\s*(?:(?:foot)?notes?|sources?|disclaimers?|definitions?|abbreviations?)\s*:?\s*$",
+    re.IGNORECASE,
+)
+_FOOTNOTE_MARKER_RE = re.compile(r"^\s*\(\d{1,2}\)\s+\S")
+
+
 def _drop_non_deal_rows(
     table: ExtractedTable,
     schema: SchemaInference,
@@ -516,6 +527,26 @@ def _drop_non_deal_rows(
                     and not any(_is_number(row.get(c)) for c in fin_cols)):
                 drop_idx.append(idx)
                 continue
+        # 1d) Documentation heading ("Notes") or numbered footnote marker
+        #     ("(3) Includes …") in the company cell, on a row with no entry
+        #     date and no financial values → footnote block row.
+        if comp_col and (date_col or fin_cols):
+            comp_v = str(row.get(comp_col) or "").strip()
+            if ((_NOTE_WORD_RE.match(comp_v) or _FOOTNOTE_MARKER_RE.match(comp_v))
+                    and _is_blank(row.get(date_col) if date_col else None)
+                    and not any(_is_number(row.get(c)) for c in fin_cols)):
+                drop_idx.append(idx)
+                continue
+        # 1e) Neither a company nor an entry date, and at most ONE mapped
+        #     financial value → per-fund subtotal / spacer row (its lone
+        #     number is a section sum). A row with several financial values
+        #     but no identity is kept: GPs (or manual anonymisation) blank
+        #     out names of confidential deals while leaving their data.
+        if use_signal and comp_col and date_col \
+           and _is_blank(row.get(comp_col)) and _is_blank(row.get(date_col)) \
+           and sum(1 for c in fin_cols if _is_number(row.get(c))) <= 1:
+            drop_idx.append(idx)
+            continue
         # 2) No company, no entry date, no financials → note / spacer row.
         if use_signal and not _has_deal_data(row):
             drop_idx.append(idx)
