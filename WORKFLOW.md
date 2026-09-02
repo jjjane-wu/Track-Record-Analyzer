@@ -160,7 +160,8 @@ data across the signal columns.
 Per-row conversion into a standardised record:
 
 - **Dates** parsed from many formats; **hold period** recomputed exactly from
-  entry/exit dates
+  entry/exit dates (a deal not yet exited holds to the track-record as-of
+  date, so unrealized deals land in real hold-period buckets)
 - **Status** normalised to exactly two states: `Realized` (incl. written-off)
   and `Unrealized` (incl. active / partially realized)
 - **Fund vintage** inferred from each fund's earliest entry date
