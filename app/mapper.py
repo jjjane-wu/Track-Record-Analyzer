@@ -58,6 +58,17 @@ TEMPLATE_FIELDS: list[dict] = [
     {"id": "fund_ownership",  "label": "Fund Ownership %",           "aliases": ["fund ownership", "ownership", "ownership pct", "initial fund ownership"]},
     {"id": "no_of_seats",     "label": "Board Seats",                "aliases": ["no of seats", "board seats", "seats"]},
     {"id": "coi_deal",        "label": "COI Deal",                    "aliases": ["coi", "coi deal", "co-investment", "coinvestment", "carry over", "carried over"]},
+    # ── Deal-detail fields (Paula, Sep 2026) ───────────────────────────
+    {"id": "signing_date",    "label": "Signing Date",               "aliases": ["signing date", "signed date", "sign date", "announcement date", "agreement date", "spa date", "contract date"], "value_hint": "date"},
+    {"id": "seller",          "label": "Seller",                     "aliases": ["seller", "vendor", "acquired from", "seller name", "sellers"]},
+    {"id": "seller_type",     "label": "Seller Type",                "aliases": ["seller type", "vendor type", "type of seller", "seller category"]},
+    {"id": "buyer",           "label": "Buyer",                      "aliases": ["buyer", "acquirer", "purchaser", "sold to", "buyer name", "exit buyer"]},
+    {"id": "gp_ownership",    "label": "GP & Affiliates Ownership %", "aliases": ["gp ownership", "gp & affiliates ownership", "gp and affiliates ownership", "total gp ownership", "affiliated ownership", "gp stake", "combined ownership"]},
+    {"id": "company_currency","label": "Company Currency",           "aliases": ["company currency", "reporting currency", "functional currency", "company ccy"]},
+    {"id": "coi_amount",      "label": "COI Amount (m)",             "aliases": ["coi amount", "co-invest amount", "co-investment amount", "coinvestment amount", "lp co-invest", "co-invest capital", "coi capital", "lp co-investors", "lp co-investment", "invested lp co-investors", "co-investor capital"]},
+    {"id": "coi_lps",         "label": "# COI LPs",                  "aliases": ["# coi lps", "number of coi lps", "coi lps", "no of coi lps", "number of lp co-investors", "no of lp co-investors", "count of co-investors", "# of coi lps"]},
+    {"id": "entry_multiple_basis", "label": "Entry Multiple Basis",  "aliases": ["entry multiple basis", "multiple basis", "basis of multiple", "entry basis", "valuation basis"]},
+    {"id": "exit_multiple_basis",  "label": "Exit Multiple Basis",   "aliases": ["exit multiple basis", "exit basis", "current multiple basis"]},
 ]
 
 FIELD_IDS = [f["id"] for f in TEMPLATE_FIELDS]
@@ -72,6 +83,9 @@ OPTIONAL_FIELD_IDS: set[str] = {
     "sourcing_partner", "transaction_type", "exit_type", "fund_ownership",
     "entry_rev", "entry_ebitda", "entry_net_debt", "entry_ev",
     "exit_rev", "exit_ebitda", "exit_net_debt", "exit_ev",
+    "signing_date", "seller", "seller_type", "buyer", "gp_ownership",
+    "company_currency", "coi_amount", "coi_lps",
+    "entry_multiple_basis", "exit_multiple_basis",
 }
 
 

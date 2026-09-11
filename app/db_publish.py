@@ -45,8 +45,9 @@ DB_DIR      = ROOT_DIR / "database"
 CONFIG_PATH = DB_DIR / "db_config.json"
 
 # Record keys (transformer numbering, via INPUT_COLS) by value type.
-_NUMERIC_KEYS = {16, 17, 18, 20, 35, 36, 37, 39, 42, 46, 47, 49, 52}
-_DATE_KEYS    = {6, 7}
+_NUMERIC_KEYS = {16, 17, 18, 20, 35, 36, 37, 39, 42, 46, 47, 49, 52,
+                 13, 95, 96, 98, 99}
+_DATE_KEYS    = {6, 7, 91}
 
 _ALLOWED_STATUS = {"realized", "unrealized"}
 

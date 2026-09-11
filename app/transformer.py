@@ -110,6 +110,7 @@ MONETARY_FIELD_IDS: tuple[str, ...] = (
     "ic_initial", "ic_total", "realized", "unrealized", "total_value",
     "entry_rev", "entry_ebitda", "entry_net_debt", "entry_ev",
     "exit_rev", "exit_ebitda", "exit_net_debt", "exit_ev",
+    "coi_amount",
 )
 
 # Magnitude bands for a monetary column's |median| (deal-level figures):
@@ -370,6 +371,36 @@ def transform_row(
     if val_method in ("-", "None", "none"):
         val_method = ""
 
+    # ── Deal-detail fields (Paula, Sep 2026) ──────────────────────────
+    def _currency_code(field_id: str) -> str | None:
+        v = str(get(field_id) or "").strip() or None
+        if v is None:
+            return None
+        try:
+            float(v.replace(",", ""))
+            return None          # numeric → mis-mapped money column
+        except ValueError:
+            return v if len(v) <= 12 else None
+
+    def _ownership_pct(field_id: str) -> float | None:
+        # GP files report ownership as decimal (0.65) or points (65).
+        v = _safe_float(get(field_id))
+        if v is None:
+            return None
+        return v / 100 if v > 1.5 else v
+
+    signing_date = _to_date(get("signing_date"))
+    seller       = str(get("seller") or "").strip()
+    seller_type  = str(get("seller_type") or "").strip()
+    buyer        = str(get("buyer") or "").strip()
+    fund_own     = _ownership_pct("fund_ownership")
+    gp_own       = _ownership_pct("gp_ownership")
+    company_ccy  = _currency_code("company_currency")
+    coi_amount   = money("coi_amount")
+    coi_lps      = _safe_float(get("coi_lps"))
+    entry_basis  = str(get("entry_multiple_basis") or "").strip()
+    exit_basis   = str(get("exit_multiple_basis") or "").strip()
+
     # If total_value not available, compute from realized + unrealized
     if total_value is None and realized is not None and unrealized is not None:
         total_value = realized + unrealized
@@ -540,6 +571,17 @@ def transform_row(
         78: adj_ic_eq_mult,
         79: wgtd_entry_debt_mult,
         80: wgtd_entry_eq_mult,
+        91: signing_date,
+        92: seller,
+        93: seller_type,
+        94: buyer,
+        95: fund_own,
+        96: gp_own,
+        97: company_ccy,
+        98: coi_amount,
+        99: coi_lps,
+        100: entry_basis or None,
+        101: exit_basis or None,
     }
 
 

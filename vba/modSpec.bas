@@ -6,13 +6,13 @@ Attribute VB_Name = "modSpec"
 ' ===================================================================
 Option Explicit
 
-Public Const DL_NCOLS As Long = 74
-Public Const IN_NCOLS As Long = 28
+Public Const DL_NCOLS As Long = 87
+Public Const IN_NCOLS As Long = 40
 Public Const RLR_NPIVOTS As Long = 15
 
 Public Sub LoadDealListSpec(h() As String, f() As String, fmt() As String, tag() As String)
-    ReDim h(1 To 74): ReDim f(1 To 74)
-    ReDim fmt(1 To 74): ReDim tag(1 To 74)
+    ReDim h(1 To 87): ReDim f(1 To 87)
+    ReDim fmt(1 To 87): ReDim tag(1 To 87)
     h(1) = "Company"
     f(1) = "in:Company"
     tag(1) = "Input"
@@ -255,10 +255,56 @@ Public Sub LoadDealListSpec(h() As String, f() As String, fmt() As String, tag()
     h(74) = "WghtdExitLeverage"
     f(74) = "FT:IFERROR(DealLevelInput[[#This Row],[AdjInvCapLeverage]]*DealLevelInput[[#This Row],[Exit Leverage]],""n/a"")"
     fmt(74) = "#,##0"
+    h(75) = "Signing Date"
+    f(75) = "in:Signing Date"
+    fmt(75) = "dd\-mmm\-yy"
+    tag(75) = "Input"
+    h(76) = "Seller"
+    f(76) = "in:Seller"
+    tag(76) = "Input"
+    h(77) = "Seller Type"
+    f(77) = "in:Seller Type"
+    tag(77) = "Input"
+    h(78) = "Buyer"
+    f(78) = "in:Buyer"
+    tag(78) = "Input"
+    h(79) = "Fund Ownership %"
+    f(79) = "in:Fund Ownership %"
+    fmt(79) = "0.0%"
+    tag(79) = "Input"
+    h(80) = "GP & Affiliates" & Chr(10) & "Ownership % (incl. COI)"
+    f(80) = "in:GP & Affiliates" & Chr(10) & "Ownership % (incl. COI)"
+    fmt(80) = "0.0%"
+    tag(80) = "Input"
+    h(81) = "Company Currency"
+    f(81) = "in:Company Currency"
+    tag(81) = "Input"
+    h(82) = "Initial Invested Capital (mlns)"
+    f(82) = "in:Initial Invested Capital (mlns)"
+    fmt(82) = "###,###,###;\(###,###,###\);""-"""
+    tag(82) = "Input"
+    h(83) = "Follow-on Capital (mlns)"
+    f(83) = "FT:IF(OR(DealLevelInput[[#This Row],[Initial Invested Capital (mlns)]]="""",DealLevelInput[[#This Row],[Total Invested Capital (mlns)]]=""""),""n/a"",DealLevelInput[[#This Row],[Total Invested Capital (mlns)]]-DealLevelInput[[#This Row],[Initial Invested Capital (mlns)]])"
+    fmt(83) = "###,###,###;\(###,###,###\);""-"""
+    tag(83) = "Formula"
+    h(84) = "COI Amount (mlns)"
+    f(84) = "in:COI Amount (mlns)"
+    fmt(84) = "###,###,###;\(###,###,###\);""-"""
+    tag(84) = "Input"
+    h(85) = "# COI LPs"
+    f(85) = "in:# COI LPs"
+    fmt(85) = "#,##0"
+    tag(85) = "Input"
+    h(86) = "Entry Multiple Basis"
+    f(86) = "in:Entry Multiple Basis"
+    tag(86) = "Input"
+    h(87) = "Exit Multiple Basis"
+    f(87) = "in:Exit Multiple Basis"
+    tag(87) = "Input"
 End Sub
 
 Public Sub LoadInputCols(h() As String)
-    ReDim h(1 To 28)
+    ReDim h(1 To 40)
     h(1) = "Company"
     h(2) = "Fund"
     h(3) = "Status"
@@ -287,6 +333,18 @@ Public Sub LoadInputCols(h() As String)
     h(26) = "Exit LTM" & Chr(10) & "EBITDA"
     h(27) = "Exit" & Chr(10) & "Net Debt"
     h(28) = "Exit Enterprise Value"
+    h(29) = "Signing Date"
+    h(30) = "Seller"
+    h(31) = "Seller Type"
+    h(32) = "Buyer"
+    h(33) = "Fund Ownership %"
+    h(34) = "GP & Affiliates" & Chr(10) & "Ownership % (incl. COI)"
+    h(35) = "Company Currency"
+    h(36) = "Initial Invested Capital (mlns)"
+    h(37) = "COI Amount (mlns)"
+    h(38) = "# COI LPs"
+    h(39) = "Entry Multiple Basis"
+    h(40) = "Exit Multiple Basis"
 End Sub
 
 Public Sub LoadHeaderBlock(refs() As String, vals() As String, isNum() As Boolean, numv() As Double)

@@ -60,6 +60,14 @@ INPUT_COLS: list[tuple[str, Any]] = [
     ("Valuation Method", 55), ("Entry LTM\nRevenue", 36), ("Entry LTM\nEBITDA", 37),
     ("Entry\nNet Debt", 39), ("Entry Enterprise\nValue", 42), ("Exit LTM\nRevenue", 46),
     ("Exit LTM\nEBITDA", 47), ("Exit\nNet Debt", 49), ("Exit Enterprise Value", 52),
+    # Deal-detail columns (Paula, Sep 2026). Appended at the END of the input
+    # block so the VBA importer's position-based reads keep working for input
+    # files downloaded before this revision (they simply leave these blank).
+    ("Signing Date", 91), ("Seller", 92), ("Seller Type", 93), ("Buyer", 94),
+    ("Fund Ownership %", 95), ("GP & Affiliates\nOwnership % (incl. COI)", 96),
+    ("Company Currency", 97), ("Initial Invested Capital (mlns)", 13),
+    ("COI Amount (mlns)", 98), ("# COI LPs", 99),
+    ("Entry Multiple Basis", 100), ("Exit Multiple Basis", 101),
 ]
 
 # Template column widths for the Deal Level Inputs tab (letter → width),

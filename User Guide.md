@@ -51,7 +51,7 @@ own team's SharePoint folder, nothing else.)
 
 ### Screen 2 — Review Mapping  ← *the one step that needs your judgment*
 
-The tool has matched the GP's raw columns to our 33 standard fields, and this
+The tool has matched the GP's raw columns to our 43 standard fields, and this
 screen asks you to check its work. It is split into three colour-coded
 blocks:
 
@@ -145,7 +145,7 @@ directly in the Deal List as plain values — the workbook carries no separate
 inputs tab and no links back to the input file.
 
 1. **Table of Contents** — navigation.
-2. **Deal List** — the imported deal data (28 standard columns, incl. a
+2. **Deal List** — the imported deal data (40 standard columns, incl. a
    per-deal currency; Realized Value shows an explicit 0 when the GP provided
    none) plus full per-deal analytics; the blue threshold tables set every
    bucket boundary (edit = instant sensitivity).
