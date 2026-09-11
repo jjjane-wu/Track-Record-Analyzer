@@ -61,26 +61,33 @@ INPUT_COLS: list[tuple[str, Any]] = [
     ("Realized\nValue", 17), ("Current\nValue", 18), ("Transaction Type", 29),
     ("GP Role", 30), ("Process Type", 31), ("Sourcing Partner", 32),
     ("Exit Type", 33), ("COI Deal (Yes/No)", 34), ("Gross TVPI", 20), ("Gross\nIRR", 35),
-    ("Valuation Method", 55), ("Financials Currency", 90),
-    ("Entry LTM\nRevenue", 36), ("Entry LTM\nEBITDA", 37),
-    ("Entry\nNet Debt", 39), ("Entry Enterprise\nValue", 42), ("Exit LTM\nRevenue", 46),
-    ("Exit LTM\nEBITDA", 47), ("Exit\nNet Debt", 49), ("Exit Enterprise Value", 52),
-    # Deal-detail columns (Paula, Sep 2026), appended after the reference
-    # block (AD..AO).
+    ("Valuation Method", 55),
+    # Deal-detail columns (Paula, Sep 2026) — attribute columns, so they sit
+    # with the other deal attributes after Valuation Method, ahead of the
+    # colour-coded Financials Currency + Entry/Exit financial blocks.
     ("Signing Date", 91), ("Seller", 92), ("Seller Type", 93), ("Buyer", 94),
     ("Fund Ownership %", 95), ("GP & Affiliates\nOwnership % (incl. COI)", 96),
     ("Company Currency", 97), ("Initial Invested Capital (mlns)", 13),
     ("COI Amount (mlns)", 98), ("# COI LPs", 99),
-    ("Entry Multiple Basis", 100), ("Exit Multiple Basis", 101),
+    # Financial blocks close the sheet; each block carries its Multiple
+    # Basis column.
+    ("Financials Currency", 90),
+    ("Entry LTM\nRevenue", 36), ("Entry LTM\nEBITDA", 37),
+    ("Entry\nNet Debt", 39), ("Entry Enterprise\nValue", 42),
+    ("Entry Multiple Basis", 100),
+    ("Exit LTM\nRevenue", 46), ("Exit LTM\nEBITDA", 47),
+    ("Exit\nNet Debt", 49), ("Exit Enterprise Value", 52),
+    ("Exit Multiple Basis", 101),
 ]
 
 # Column widths (position within INPUT_COLS → width), from the reference file;
 # the deal-detail block gets consistent widths of its own.
 _INPUT_COL_WIDTHS: list[float] = [
     30.5, 32.3, 15.5, 15.8, 13.0, 28.5, 27.7, 18.2, 13.0, 13.8,
-    18.5, 13.0, 13.0, 13.0, 26.2, 16.0, 13.0, 13.0, 16.2, 13.0,
-    17.5, 17.3, 13.5, 17.5, 16.8, 20.5, 18.2, 17.5,
-    13.0, 20.0, 15.0, 20.0, 14.0, 18.0, 13.0, 18.2, 15.0, 11.0, 15.0, 15.0,
+    18.5, 13.0, 13.0, 13.0, 26.2, 16.0, 13.0, 13.0, 16.2,
+    13.0, 20.0, 15.0, 20.0, 14.0, 18.0, 13.0, 18.2, 15.0, 11.0,
+    13.0, 17.5, 17.3, 13.5, 17.5, 15.0,
+    16.8, 20.5, 18.2, 17.5, 15.0,
 ]
 
 # Per-record-key data formats and alignment for the inputs sheet (reference
