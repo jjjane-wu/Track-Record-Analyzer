@@ -123,7 +123,9 @@ so nothing enters the database until a person has checked it.
      block, but you must tick a box confirming you've checked them.
 4. Click **Publish**. One CSV snapshot is written per GP per as-of date
    (`GP_2 - 2025-09-30.csv`) into the database folder, stamped with who
-   published it and when.
+   published it and when. Every snapshot follows the team's **TR Database
+   Uploader Template** column layout (TR Date and GP Name on every row), so
+   Power BI can stack all GPs into one table with no reshaping.
 
 Re-publishing the same GP and date **replaces** its snapshot — corrections
 never create duplicates. A newer reporting date adds a new snapshot, so the

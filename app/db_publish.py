@@ -73,6 +73,53 @@ _HEADER_TO_KEY = {h.lower(): k for h, k in EXPECTED_HEADERS}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# Database snapshot schema — "TR Database Uploader Template - v1"
+# ═══════════════════════════════════════════════════════════════════════════
+# Each GP's snapshot is one flat table in exactly this column order. Sources:
+# an int is a transformer record key (via the input file's columns); "gp",
+# "tr_date" and "fund_ccy" come from the input file's meta block; None means
+# the pipeline does not capture the field yet — the column is emitted empty
+# so the database schema is already stable for Power BI.
+DB_SCHEMA: list[tuple[str, Any]] = [
+    ("TR Date",                                "tr_date"),
+    ("GP Name",                                "gp"),
+    ("Fund",                                   2),
+    ("Company",                                1),
+    ("Fund Currency",                          "fund_ccy"),
+    ("Status",                                 5),
+    ("Investment Date",                        6),
+    ("Exit Date",                              7),
+    ("Sector",                                 11),
+    ("Sub-Sector",                             None),
+    ("Geography/Region",                       12),
+    ("Country",                                None),
+    ("Transaction Type",                       29),
+    ("GP Role",                                30),
+    ("Control Type",                           None),
+    ("Process Type",                           31),
+    ("Lead Partner",                           32),
+    ("Exit Type",                              33),
+    ("COI Deal (Yes/No)",                      34),
+    ("Number of M&A Transactions (Bolt-Ons)",  None),
+    ("Valuation Method",                       55),
+    ("Total Invested Capital (mlns)",          16),
+    ("Realized Value",                         17),
+    ("Current Value",                          18),
+    ("Gross TVPI",                             20),
+    ("Gross IRR",                              35),
+    ("Financials Currency",                    90),
+    ("Entry LTM Revenue",                      36),
+    ("Entry LTM EBITDA",                       37),
+    ("Entry Net Debt",                         39),
+    ("Entry Enterprise Value",                 42),
+    ("Exit LTM Revenue",                       46),
+    ("Exit LTM EBITDA",                        47),
+    ("Exit Net Debt",                          49),
+    ("Exit Enterprise Value",                  52),
+]
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Reading the Deal Level Input workbook (our own fixed format)
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -200,9 +247,9 @@ def validate(parsed: ParsedInput) -> tuple[list[str], list[str]]:
     warnings: list[str] = list(parsed.issues)
 
     if not parsed.gp:
-        errors.append("GP Name is missing (cell C3 of the input file).")
+        errors.append("GP Name is missing (cell C4 of the input file).")
     if parsed.as_of is None:
-        errors.append("Track Record Date is missing or not a date (cell C4).")
+        errors.append("Track Record Date is missing or not a date (cell C5).")
     if not parsed.rows:
         errors.append("No deal rows found below the header row.")
     if not parsed.currency:
@@ -306,33 +353,45 @@ def validate(parsed: ParsedInput) -> tuple[list[str], list[str]]:
 def to_long_table(parsed: ParsedInput,
                   published_by: str = "",
                   published_at: datetime | None = None) -> pd.DataFrame:
-    """One row per deal; GP/as-of stamped on every row; tidy typed columns."""
+    """One row per deal in the DB_SCHEMA (uploader template v1) column order,
+    with TR Date / GP Name stamped on every row; three provenance columns
+    (Source File / Published By / Published At) trail the template block."""
     published_at = published_at or datetime.now()
-    fc_col = next((h for h, k in EXPECTED_HEADERS if k == 90), "Deal Currency")
+    # input-file column name for each record key (cleaned, as read)
+    key_to_src: dict[int, str | None] = {}
+    for h, key in EXPECTED_HEADERS:
+        key_to_src[key] = next(
+            (x for x in parsed.headers if x.lower() == h.lower()), None)
 
     out_rows: list[dict[str, Any]] = []
     for row in parsed.rows:
-        rec: dict[str, Any] = {
-            "GP Name": parsed.gp,
-            "Track Record Date": parsed.as_of.isoformat() if parsed.as_of else "",
-        }
-        for h, key in EXPECTED_HEADERS:
-            src = next((x for x in parsed.headers if x.lower() == h.lower()), None)
-            v = row.get(src) if src else None
-            if key in _DATE_KEYS:
-                d = _as_date(v)
-                v = d.isoformat() if d else ""
-            elif v is None:
-                v = ""
-            if h == fc_col and v == "" and parsed.currency:
-                v = parsed.currency          # back-fill from the meta block
-            rec[h] = v
+        rec: dict[str, Any] = {}
+        for col, src_key in DB_SCHEMA:
+            if src_key == "gp":
+                v = parsed.gp
+            elif src_key == "tr_date":
+                v = parsed.as_of.isoformat() if parsed.as_of else ""
+            elif src_key == "fund_ccy":
+                v = parsed.currency or ""
+            elif src_key is None:
+                v = ""                        # not captured by the pipeline yet
+            else:
+                v = row.get(key_to_src.get(src_key) or "", None)
+                if src_key in _DATE_KEYS:
+                    d = _as_date(v)
+                    v = d.isoformat() if d else ""
+                elif v is None:
+                    v = ""
+                if src_key == 90 and v == "" and parsed.currency:
+                    v = parsed.currency      # back-fill from the meta block
+            rec[col] = v
         rec["Source File"]  = parsed.source_name
         rec["Published By"] = published_by
         rec["Published At"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
         out_rows.append(rec)
 
-    return pd.DataFrame(out_rows)
+    return pd.DataFrame(out_rows, columns=[c for c, _ in DB_SCHEMA]
+                        + ["Source File", "Published By", "Published At"])
 
 
 def snapshot_filename(parsed: ParsedInput) -> str:
@@ -373,7 +432,8 @@ def list_snapshots(db_dir: str | Path) -> pd.DataFrame:
                 rows.append({
                     "File": p.name,
                     "GP": first.get("GP Name", ""),
-                    "As of": first.get("Track Record Date", ""),
+                    "As of": first.get("TR Date",
+                                       first.get("Track Record Date", "")),
                     "Deals": len(df),
                     "Published": first.get("Published At", ""),
                     "By": first.get("Published By", ""),

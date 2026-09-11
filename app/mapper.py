@@ -35,7 +35,7 @@ TEMPLATE_FIELDS: list[dict] = [
     {"id": "role",            "label": "GP Role",         "aliases": ["role", "gp role", "fund role", "lead", "co-invest"]},
     {"id": "transaction_type","label": "Transaction Type","aliases": ["source", "transaction type", "deal type", "type", "deal source"]},
     {"id": "competition",     "label": "Process Type",    "aliases": ["competition", "process type", "process", "auction type", "sourcing process"]},
-    {"id": "sourcing_partner","label": "Sourcing Partner","aliases": ["sourcing partner", "advisory partner", "responsible partner", "partner"]},
+    {"id": "sourcing_partner","label": "Sourcing Partner","aliases": ["sourcing partner", "advisory partner", "responsible partner", "partner", "lead partner", "deal lead", "deal team lead"]},
     {"id": "exit_type",       "label": "Exit Type",       "aliases": ["exit type", "type of exit", "exit route"]},
     {"id": "holding_period",  "label": "Hold Period",     "aliases": ["holding period", "hold period", "years held", "duration"],                                                                     "value_hint": "decimal_years"},
     {"id": "ic_initial",  "label": "Initial Fund Equity Invested (m)", "aliases": ["initial fund equity invested", "initial equity invested", "initial invested", "equity invested initial", "initial equity", "initial fund equity"]},
