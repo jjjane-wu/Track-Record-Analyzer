@@ -127,9 +127,13 @@ Public Sub ReplaceInputs(Optional ByVal p As String = "")
         p = CStr(f)
     End If
     Dim wbI As Workbook, old As Worksheet, pos As Long
-    On Error Resume Next
-    GrantAccessToMultipleFiles Array(p)
-    On Error GoTo 0
+    ' Mac-only sandbox permission API - the symbol does not exist on
+    ' Windows, so it must be excluded at COMPILE time, not just guarded.
+    #If Mac Then
+        On Error Resume Next
+        GrantAccessToMultipleFiles Array(p)
+        On Error GoTo 0
+    #End If
     Set wbI = Workbooks.Open(p, 0, True)
 
     ' The picked file must actually be a Deal Level Input workbook -
