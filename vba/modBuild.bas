@@ -10,7 +10,7 @@ Option Explicit
 
 Public Const DL_HDR_ROW As Long = 13          ' Deal List header row
 Public Const DL_DATA_ROW As Long = 14         ' first data row
-Public Const IN_DATA_ROW As Long = 7          ' first input data row (headers row 6)
+Public Const IN_DATA_ROW As Long = 8          ' first input data row (headers row 7)
 Public Const FIRST_COL As Long = 2            ' both tables start at column B
 
 ' Number of deal rows on the inputs sheet. A row counts while ANY of the
@@ -106,10 +106,10 @@ Public Sub BuildDealList()
     ' -- meta block: VALUES (no cross-sheet links anywhere) ---------------
     ws.Range("B2").Value = "Deal List": ws.Range("B2").Font.Bold = True
     ws.Range("B2").Font.Size = 16
-    ws.Range("B4").Value = "Sponsor/GP:":  ws.Range("C4").Value = inWs.Range("C3").Value
-    ws.Range("B5").Value = "As of Date:":  ws.Range("C5").Value = inWs.Range("C4").Value
+    ws.Range("B4").Value = "Sponsor/GP:":  ws.Range("C4").Value = inWs.Range("C4").Value
+    ws.Range("B5").Value = "As of Date:":  ws.Range("C5").Value = inWs.Range("C5").Value
     ws.Range("C5").NumberFormat = "d-mmm-yy"
-    ws.Range("B6").Value = "Currency:":    ws.Range("C6").Value = inWs.Range("C5").Value
+    ws.Range("B6").Value = "Currency:":    ws.Range("C6").Value = inWs.Range("C6").Value
 
     ' -- tag row 12 + header row 13 ---------------------------------------
     For i = 1 To modSpec.DL_NCOLS

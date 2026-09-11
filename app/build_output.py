@@ -50,19 +50,23 @@ from deal_list_spec import DL_COLS, DL_FORMATS, HEADER_BLOCK, TAG_ROW
 # ═══════════════════════════════════════════════════════════════════════════════
 
 # Deal Level Inputs: (header, transformer record key).
+# Names, order and styling mirror the team's reference file
+# ("2026.06.30 - EQT Asia MM - Gross Deal Level Input.xlsx"): Investment Date
+# sits right after Status, and the per-deal currency is called "Financials
+# Currency" and sits just before the Entry/Exit financials block it describes.
 INPUT_COLS: list[tuple[str, Any]] = [
-    ("Company", 1), ("Fund", 2), ("Status", 5), ("Deal Currency", 90),
-    ("Inv. Date", 6), ("Exit Date", 7),
+    ("Company", 1), ("Fund", 2), ("Status", 5),
+    ("Investment Date", 6), ("Exit Date", 7),
     ("Sector", 11), ("Geography", 12), ("Total Invested Capital (mlns)", 16),
     ("Realized\nValue", 17), ("Current\nValue", 18), ("Transaction Type", 29),
     ("GP Role", 30), ("Process Type", 31), ("Sourcing Partner", 32),
     ("Exit Type", 33), ("COI Deal (Yes/No)", 34), ("Gross TVPI", 20), ("Gross\nIRR", 35),
-    ("Valuation Method", 55), ("Entry LTM\nRevenue", 36), ("Entry LTM\nEBITDA", 37),
+    ("Valuation Method", 55), ("Financials Currency", 90),
+    ("Entry LTM\nRevenue", 36), ("Entry LTM\nEBITDA", 37),
     ("Entry\nNet Debt", 39), ("Entry Enterprise\nValue", 42), ("Exit LTM\nRevenue", 46),
     ("Exit LTM\nEBITDA", 47), ("Exit\nNet Debt", 49), ("Exit Enterprise Value", 52),
-    # Deal-detail columns (Paula, Sep 2026). Appended at the END of the input
-    # block so the VBA importer's position-based reads keep working for input
-    # files downloaded before this revision (they simply leave these blank).
+    # Deal-detail columns (Paula, Sep 2026), appended after the reference
+    # block (AD..AO).
     ("Signing Date", 91), ("Seller", 92), ("Seller Type", 93), ("Buyer", 94),
     ("Fund Ownership %", 95), ("GP & Affiliates\nOwnership % (incl. COI)", 96),
     ("Company Currency", 97), ("Initial Invested Capital (mlns)", 13),
@@ -70,16 +74,49 @@ INPUT_COLS: list[tuple[str, Any]] = [
     ("Entry Multiple Basis", 100), ("Exit Multiple Basis", 101),
 ]
 
-# Template column widths for the Deal Level Inputs tab (letter → width),
-# re-lettered after the 'Data as of' column was removed (user request).
-_INPUT_WIDTHS = {
-    "A": 8.8, "B": 30.5, "C": 15.5, "E": 12.5, "F": 15.8, "H": 28.5,
-    "I": 20.0, "J": 18.2, "L": 13.8, "M": 18.5, "Q": 26.2, "R": 16.0,
-    "U": 16.2, "V": 17.5, "W": 17.3, "X": 13.5, "Y": 17.5, "Z": 13.5,
-    "AA": 20.5, "AB": 18.2, "AC": 17.5,
+# Column widths (position within INPUT_COLS → width), from the reference file;
+# the deal-detail block gets consistent widths of its own.
+_INPUT_COL_WIDTHS: list[float] = [
+    30.5, 32.3, 15.5, 15.8, 13.0, 28.5, 27.7, 18.2, 13.0, 13.8,
+    18.5, 13.0, 13.0, 13.0, 26.2, 16.0, 13.0, 13.0, 16.2, 13.0,
+    17.5, 17.3, 13.5, 17.5, 16.8, 20.5, 18.2, 17.5,
+    13.0, 20.0, 15.0, 20.0, 14.0, 18.0, 13.0, 18.2, 15.0, 11.0, 15.0, 15.0,
+]
+
+# Per-record-key data formats and alignment for the inputs sheet (reference
+# file conventions: money one decimal, TVPI two-decimal "x", dd-mmm-yy dates).
+_IN_FMT_MONEY_BIG   = '###,###,###.0;\\(###,###,###.0\\);"-"'
+_IN_FMT_MONEY_SMALL = '###,###.0;\\(###,###.0\\);"-"'
+_IN_KEY_FMT: dict[int, str] = {
+    16: _IN_FMT_MONEY_BIG, 17: _IN_FMT_MONEY_BIG, 18: _IN_FMT_MONEY_BIG,
+    13: _IN_FMT_MONEY_BIG, 98: _IN_FMT_MONEY_BIG,
+    36: _IN_FMT_MONEY_SMALL, 37: _IN_FMT_MONEY_SMALL, 39: _IN_FMT_MONEY_SMALL,
+    42: _IN_FMT_MONEY_SMALL, 46: _IN_FMT_MONEY_SMALL, 47: _IN_FMT_MONEY_SMALL,
+    49: _IN_FMT_MONEY_SMALL, 52: _IN_FMT_MONEY_SMALL,
+    20: '0.00\\x', 35: '0.0%', 95: '0.0%', 96: '0.0%', 99: '#,##0',
+    6: 'dd\\-mmm\\-yy', 7: 'dd\\-mmm\\-yy', 91: 'dd\\-mmm\\-yy',
 }
+_IN_LEFT_KEYS = {1, 11}          # Company, Sector read left-aligned
 _INPUT_BLUE = Font(color="0000FF", size=10)          # classic "input cell" blue
 _HDR_VALUE_FONT = Font(bold=True, size=10, color="0000FF")
+
+# Inputs-sheet styling, matched to the team's reference file: black header
+# bar with white Arial 10 bold; the Financials Currency header stands out on
+# a grey-blue fill; data cells are blue Arial 10 on light blue with hair
+# borders; meta values are bold blue on light blue.
+_IN_HDR_FONT      = Font(name="Arial", size=10, bold=True, color="FFFFFF")
+_IN_HDR_FILL      = PatternFill("solid", fgColor=Color(theme=1))
+_IN_HDR_MARK_FONT = Font(name="Arial", size=10, bold=True)
+# Entry-side block headers (Financials Currency + Entry financials, plus our
+# Entry Multiple Basis): grey-blue. Exit-side block: light green.
+_IN_HDR_ENTRY_FILL = PatternFill("solid", fgColor=Color(theme=3, tint=0.6))
+_IN_HDR_EXIT_FILL  = PatternFill("solid", fgColor=Color(theme=9, tint=0.8))
+_IN_ENTRY_KEYS = {90, 36, 37, 39, 42, 100}
+_IN_EXIT_KEYS  = {46, 47, 49, 52, 101}
+_IN_DATA_FONT     = Font(name="Arial", size=10, color="0000FF")
+_IN_META_FONT     = Font(name="Arial", size=10, bold=True, color="0000FF")
+_IN_HAIR_BORDER   = Border(left=Side(style="hair"), right=Side(style="hair"),
+                           top=Side(style="hair"), bottom=Side(style="hair"))
 
 # Template cell styling (IO templates): INPUT cells are light blue with blue
 # text ("Accent1, Lighter 80%" = theme 4 tint 0.8); formula cells are plain
@@ -152,7 +189,7 @@ _HDR_FILL = PatternFill("solid", fgColor="1F4E78")
 _HDR_FONT = Font(bold=True, color="FFFFFF")
 _TITLE_FONT = Font(bold=True, size=14)
 _SECTION_FONT = Font(bold=True, size=11, color="1F4E78")
-_INPUT_START = 7          # Deal Level Inputs data start row (header row 6)
+_INPUT_START = 8          # Deal Level Inputs data start row (header row 7)
 _DL_START = 14            # Deal List data rows (tag row 12, table header row 13)
 _PIVOT_GAP = 7            # rows between a section title and the pivot body:
                           # 3 shipped report filters + separator sit at the
@@ -406,42 +443,64 @@ def _write_toc(wb) -> None:
 
 def _write_inputs(ws, records: list[dict], gp: str, currency: str,
                   track_record_date: date | None) -> None:
-    ws["B2"] = "Deal Level Input"; ws["B2"].font = Font(bold=True, size=16)
+    # Everything below mirrors the team's reference input file: Arial
+    # throughout, grey title band, black header bar (row 7, 35.5 high),
+    # light-blue/blue "type here" data cells with hair borders, no gridlines.
+    ws.sheet_view.showGridLines = False
+    last_col = get_column_letter(1 + len(INPUT_COLS))
 
-    # Compact meta block (EWL layout: no indicator/spacer rows)
-    ws["B3"] = "GP Name";            ws["C3"] = gp
-    ws["B4"] = "Track Record Date";  ws["C4"] = track_record_date or date.today()
-    ws["C4"].number_format = "d-mmm-yy"
-    ws["B5"] = "Currency";           ws["C5"] = currency
-    for lbl, val in (("B3", "C3"), ("B4", "C4"), ("B5", "C5")):
-        ws[lbl].font = Font(size=10)
-        ws[val].font = _INPUT_BLUE
+    ws["B2"] = "Deal Level Input"
+    ws["B2"].font = Font(name="Arial", bold=True, size=16)
+    for c in range(2, 2 + len(INPUT_COLS)):
+        ws.cell(row=2, column=c).fill = _GRAY_FILL
+    ws.row_dimensions[2].height = 21.0
+    ws.row_dimensions[3].height = 17.5
+
+    ws["B4"] = "GP Name";            ws["C4"] = gp
+    ws["B5"] = "Track Record Date";  ws["C5"] = track_record_date or date.today()
+    ws["C5"].number_format = "d-mmm-yy"
+    ws["B6"] = "Currency";           ws["C6"] = currency
+    for lbl, val, horiz in (("B4", "C4", "left"), ("B5", "C5", "center"),
+                            ("B6", "C6", "center")):
+        ws[lbl].font = Font(name="Arial", size=10)
+        ws[val].font = _IN_META_FONT
         ws[val].fill = _INPUT_FILL
-        ws[val].alignment = Alignment(horizontal="center")
+        ws[val].alignment = Alignment(horizontal=horiz)
 
     hdr_row = _INPUT_START - 1
-    for j, (hdr, _key) in enumerate(INPUT_COLS):
+    for j, (hdr, key) in enumerate(INPUT_COLS):
         cell = ws.cell(row=hdr_row, column=2 + j, value=hdr)
-        cell.font = _HDR_FONT; cell.fill = _HDR_FILL
-        cell.alignment = Alignment(wrap_text=True, horizontal="center", vertical="center")
+        if key in _IN_ENTRY_KEYS:
+            cell.font = _IN_HDR_MARK_FONT
+            cell.fill = _IN_HDR_ENTRY_FILL
+        elif key in _IN_EXIT_KEYS:
+            cell.font = _IN_HDR_MARK_FONT
+            cell.fill = _IN_HDR_EXIT_FILL
+        else:
+            cell.font = _IN_HDR_FONT
+            cell.fill = _IN_HDR_FILL
+        horiz = "left" if key in _IN_LEFT_KEYS else "center"
+        cell.alignment = Alignment(wrap_text=True, horizontal=horiz,
+                                   vertical="center")
     ws.row_dimensions[hdr_row].height = 35.5
-    for col, w in _INPUT_WIDTHS.items():
-        ws.column_dimensions[col].width = w
+    ws.column_dimensions["A"].width = 8.8
+    for j in range(len(INPUT_COLS)):
+        ws.column_dimensions[get_column_letter(2 + j)].width = _INPUT_COL_WIDTHS[j]
 
     for i, rec in enumerate(records):
         r = _INPUT_START + i
         for j, (_hdr, key) in enumerate(INPUT_COLS):
-            col = 2 + j
-            v = _val(rec.get(key))
-            cell = ws.cell(row=r, column=col, value=v)
-            if isinstance(v, (date, datetime)):
-                cell.number_format = "d-mmm-yy"
-                cell.alignment = Alignment(horizontal="center")
-            cell.font = _INPUT_BLUE
+            cell = ws.cell(row=r, column=2 + j, value=_val(rec.get(key)))
+            fmt = _IN_KEY_FMT.get(key)
+            if fmt:
+                cell.number_format = fmt
+            cell.font = _IN_DATA_FONT
             cell.fill = _INPUT_FILL
+            cell.border = _IN_HAIR_BORDER
+            if key not in _IN_LEFT_KEYS:
+                cell.alignment = Alignment(horizontal="center")
 
     n = len(records)
-    last_col = get_column_letter(1 + len(INPUT_COLS))
     ref = f"B{_INPUT_START - 1}:{last_col}{max(_INPUT_START + n - 1, _INPUT_START)}"
     tbl = Table(displayName="GrossDealLevelInput", ref=ref)
     # template tables carry no table style (no banding) — cell fills rule
@@ -490,9 +549,9 @@ def _write_deal_list(ws, records: list[dict], gp: str,
             c.font = _CALC_FONT
     # GP / as-of / currency — linked to the Deal Level Inputs tab.
     # linked (not typed-in) cells — plain formula look, black on white
-    ws["C4"] = "='Deal Level Inputs'!C3"
-    ws["C5"] = "='Deal Level Inputs'!C4"; ws["C5"].number_format = "d-mmm-yy"
-    ws["C6"] = "='Deal Level Inputs'!C5"
+    ws["C4"] = "='Deal Level Inputs'!C4"
+    ws["C5"] = "='Deal Level Inputs'!C5"; ws["C5"].number_format = "d-mmm-yy"
+    ws["C6"] = "='Deal Level Inputs'!C6"
     for ref in ("C4", "C5", "C6"):
         ws[ref].font = _CALC_FONT
 
@@ -3146,7 +3205,7 @@ def build_output(records: list[dict], gp_name: str, currency: str = "USD",
     errs = phase_errors if phase_errors is not None else []
     for rec in records:                        # EWL defaults
         if not _cell_str(rec.get(90)):
-            rec[90] = currency                 # Deal Currency
+            rec[90] = currency                 # Financials Currency
         if _cell_num(rec.get(17)) is None:
             rec[17] = 0.0                      # Realized Value: 0 if missing
     wb = openpyxl.Workbook()

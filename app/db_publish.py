@@ -54,7 +54,9 @@ _ALLOWED_STATUS = {"realized", "unrealized"}
 
 # Old column names that later releases renamed — normalised on read so
 # previously downloaded input files keep working everywhere.
-_LEGACY_HEADERS = {"fund currency": "Deal Currency"}
+_LEGACY_HEADERS = {"fund currency": "Financials Currency",
+                   "deal currency": "Financials Currency",
+                   "inv. date": "Investment Date"}
 
 
 def _clean_header(h: Any) -> str:
@@ -204,7 +206,7 @@ def validate(parsed: ParsedInput) -> tuple[list[str], list[str]]:
     if not parsed.rows:
         errors.append("No deal rows found below the header row.")
     if not parsed.currency:
-        warnings.append("Currency is missing (cell C5) — Deal Currency blanks "
+        warnings.append("Currency is missing — Financials Currency blanks "
                         "cannot be back-filled.")
 
     def col_of(key: int) -> str | None:

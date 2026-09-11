@@ -217,9 +217,11 @@ tabs, in order (four further tabs are currently switched off — see below):
 2. **Deal Level Inputs** — the clean input data as *values*: 28 columns
    (B..AC), meta block (GP Name / Track Record Date / Currency), table
    `GrossDealLevelInput`. Every data cell is a true input: light-blue fill,
-   blue font. Per Eric's EWL revision: a **Deal Currency** column sits after
-   Status (mapped from the raw file when a currency column exists — with a
-   guard that rejects numeric values — else defaulted to the workbook
+   blue font. Per the team's reference layout: a **Financials Currency**
+   column (shown as **Deal Currency** on the Deal List) sits just before the
+   Entry/Exit financials block (mapped from the raw file when a currency
+   column exists — with a guard that rejects numeric values — else defaulted
+   to the workbook
    currency), the Initial Invested Capital column is removed, and **Realized
    Value is written as an explicit 0** when the GP provided no value.
 
@@ -313,7 +315,7 @@ Monetary fields are in millions of the deal currency (auto-normalised).
 | `exit_type` | Exit Type | string |
 | `holding_period` | Hold Period | decimal years |
 | `ic_initial` | (no output column — kept as fallback for the IC bucket) | millions |
-| `fund_currency` | Deal Currency (defaults to workbook currency; numeric values rejected) | string |
+| `fund_currency` | Financials Currency (defaults to workbook currency; numeric values rejected) | string |
 | `ic_total` | Total Invested Capital | millions |
 | `realized` | Realized Value | millions |
 | `unrealized` | Current Value | millions |
