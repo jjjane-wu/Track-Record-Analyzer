@@ -18,6 +18,7 @@ database/deals/
 database/db_config.json
 
 # ── Confidential GP data — never commit, under any name ──────────────
+data/
 IO/
 1 - Example GP Track Records/
 2 - Example TR Analysis for Prospective Fund/
