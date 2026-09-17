@@ -73,50 +73,72 @@ _HEADER_TO_KEY = {h.lower(): k for h, k in EXPECTED_HEADERS}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# Database snapshot schema — "TR Database Uploader Template - v1"
+# Database snapshot schema — "GP TR Database Uploader Input Sheet - v1"
 # ═══════════════════════════════════════════════════════════════════════════
-# Each GP's snapshot is one flat table in exactly this column order. Sources:
-# an int is a transformer record key (via the input file's columns); "gp",
-# "tr_date" and "fund_ccy" come from the input file's meta block; None means
-# the pipeline does not capture the field yet — the column is emitted empty
-# so the database schema is already stable for Power BI.
-DB_SCHEMA: list[tuple[str, Any]] = [
-    ("TR Date",                                "tr_date"),
-    ("GP Name",                                "gp"),
-    ("Fund",                                   2),
-    ("Company",                                1),
-    ("Fund Currency",                          "fund_ccy"),
-    ("Status",                                 5),
-    ("Investment Date",                        6),
-    ("Exit Date",                              7),
-    ("Sector",                                 11),
-    ("Sub-Sector",                             None),
-    ("Geography/Region",                       12),
-    ("Country",                                None),
-    ("Transaction Type",                       29),
-    ("GP Role",                                30),
-    ("Control Type",                           None),
-    ("Process Type",                           31),
-    ("Lead Partner",                           32),
-    ("Exit Type",                              33),
-    ("COI Deal (Yes/No)",                      34),
-    ("Number of M&A Transactions (Bolt-Ons)",  None),
-    ("Valuation Method",                       55),
-    ("Total Invested Capital (mlns)",          16),
-    ("Realized Value",                         17),
-    ("Current Value",                          18),
-    ("Gross TVPI",                             20),
-    ("Gross IRR",                              35),
-    ("Financials Currency",                    90),
-    ("Entry LTM Revenue",                      36),
-    ("Entry LTM EBITDA",                       37),
-    ("Entry Net Debt",                         39),
-    ("Entry Enterprise Value",                 42),
-    ("Exit LTM Revenue",                       46),
-    ("Exit LTM EBITDA",                        47),
-    ("Exit Net Debt",                          49),
-    ("Exit Enterprise Value",                  52),
+# Each GP's snapshot is one styled workbook whose "Deal Level Inputs" sheet
+# matches the team's uploader sheet cell for cell. Per column:
+# (header, source, number format, alignment, header block).
+# source: int = transformer record key; "gp"/"tr_date"/"fund_ccy" = meta;
+# "follow_on" = the template's live table formula Total - Initial.
+# block: "id" black header, "entry" grey-blue, "exit" light green.
+_F_MONEY_BIG   = '###,###,###.0;\\(###,###,###.0\\);"-"'
+_F_MONEY_SMALL = '###,###.0;\\(###,###.0\\);"-"'
+_F_DATE        = 'dd\\-mmm\\-yy'
+DB_SCHEMA: list[tuple[str, Any, str, str, str]] = [
+    ("Track Record\nDate",       "tr_date",   "d-mmm-yy",     "center", "id"),
+    ("GP",                        "gp",        "General",      "left",   "id"),
+    ("Fund",                      2,           "General",      "center", "id"),
+    ("Fund\nCurrency",           "fund_ccy",  "General",      "center", "id"),
+    ("Company",                   1,           "General",      "left",   "id"),
+    ("Status",                    5,           "General",      "center", "id"),
+    ("Investment\nDate",         6,           _F_DATE,        "center", "id"),
+    ("Exit\nDate",               7,           _F_DATE,        "center", "id"),
+    ("Sector",                    11,          "General",      "left",   "id"),
+    ("Geography",                 12,          "General",      "center", "id"),
+    ("Initial Invested Capital (mlns)",   13,  _F_MONEY_BIG,   "center", "id"),
+    ("Follow-On Invested Capital (mlns)", "follow_on", _F_MONEY_BIG, "center", "id"),
+    ("Total Invested Capital (mlns)",     16,  _F_MONEY_BIG,   "center", "id"),
+    ("Realized\nValue",          17,          _F_MONEY_BIG,   "center", "id"),
+    ("Current\nValue",           18,          _F_MONEY_BIG,   "center", "id"),
+    ("Transaction Type",          29,          "General",      "center", "id"),
+    ("GP Role",                   30,          "General",      "center", "id"),
+    ("Process Type",              31,          "General",      "center", "id"),
+    ("Sourcing Partner",          32,          "General",      "center", "id"),
+    ("Exit Type",                 33,          "General",      "center", "id"),
+    ("COI Deal (Yes/No)",         34,          "General",      "center", "id"),
+    ("Gross TVPI",                20,          "0.00\\x",    "center", "id"),
+    ("Gross\nIRR",               35,          "0.0%",         "center", "id"),
+    ("Valuation Method",          55,          "General",      "center", "id"),
+    ("Signing Date",              91,          _F_DATE,        "center", "id"),
+    ("Seller",                    92,          "General",      "center", "id"),
+    ("Seller Type",               93,          "General",      "center", "id"),
+    ("Buyer",                     94,          "General",      "center", "id"),
+    ("Fund Ownership %",          95,          "0.0%",         "center", "id"),
+    ("GP & Affiliates\nOwnership % (incl. COI)", 96, "0.0%",  "center", "id"),
+    ("Company Currency",          97,          "General",      "center", "id"),
+    ("COI Amount (mlns)",         98,          _F_MONEY_BIG,   "center", "id"),
+    ("# COI LPs",                 99,          "#,##0",        "center", "id"),
+    ("Financials Currency",       90,          "General",      "center", "entry"),
+    ("Entry LTM\nRevenue",       36,          _F_MONEY_SMALL, "center", "entry"),
+    ("Entry LTM\nEBITDA",        37,          _F_MONEY_SMALL, "center", "entry"),
+    ("Entry\nNet Debt",          39,          _F_MONEY_SMALL, "center", "entry"),
+    ("Entry Enterprise\nValue",  42,          _F_MONEY_SMALL, "center", "entry"),
+    ("Entry Multiple Basis",      100,         "General",      "center", "entry"),
+    ("Exit LTM\nRevenue",        46,          _F_MONEY_SMALL, "center", "exit"),
+    ("Exit LTM\nEBITDA",         47,          _F_MONEY_SMALL, "center", "exit"),
+    ("Exit\nNet Debt",           49,          _F_MONEY_SMALL, "center", "exit"),
+    ("Exit Enterprise Value",     52,          _F_MONEY_SMALL, "center", "exit"),
+    ("Exit Multiple Basis",       101,         "General",      "center", "exit"),
 ]
+# Column widths B..AS, plus the narrow spacer column A, from the template.
+_DB_COL_WIDTHS = [19.6, 32.3, 15.9, 13.0, 32.6, 16.9, 18.1, 13.0, 28.4, 27.7,
+                  18.1, 13.0, 13.0, 13.0, 13.9, 18.4, 13.0, 13.0, 13.0, 26.1,
+                  16.0, 13.0, 13.0, 16.1, 13.0, 20.0, 15.0, 20.0, 14.0, 18.0,
+                  13.0, 13.0, 15.0, 11.0, 13.0, 17.4, 17.3, 13.4, 17.4, 15.0,
+                  16.9, 20.4, 18.1, 17.4]
+_DB_NOTE = ("Note - leave cells blank if no value exists, don't enter 0 for "
+            "exit date if a asset is unrealized for example")
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -353,51 +375,143 @@ def validate(parsed: ParsedInput) -> tuple[list[str], list[str]]:
 def to_long_table(parsed: ParsedInput,
                   published_by: str = "",
                   published_at: datetime | None = None) -> pd.DataFrame:
-    """One row per deal in the DB_SCHEMA (uploader template v1) column order,
-    with TR Date / GP Name stamped on every row; three provenance columns
-    (Source File / Published By / Published At) trail the template block."""
-    published_at = published_at or datetime.now()
-    # input-file column name for each record key (cleaned, as read)
-    key_to_src: dict[int, str | None] = {}
-    for h, key in EXPECTED_HEADERS:
-        key_to_src[key] = next(
-            (x for x in parsed.headers if x.lower() == h.lower()), None)
-
+    """Preview table: one row per deal in DB_SCHEMA column order (headers
+    flattened to one line). The published workbook is written by
+    build_snapshot_workbook; provenance lives in its hidden sheet."""
+    key_to_src = _key_to_src(parsed)
     out_rows: list[dict[str, Any]] = []
     for row in parsed.rows:
         rec: dict[str, Any] = {}
-        for col, src_key in DB_SCHEMA:
-            if src_key == "gp":
-                v = parsed.gp
-            elif src_key == "tr_date":
-                v = parsed.as_of.isoformat() if parsed.as_of else ""
-            elif src_key == "fund_ccy":
-                v = parsed.currency or ""
-            elif src_key is None:
-                v = ""                        # not captured by the pipeline yet
-            else:
-                v = row.get(key_to_src.get(src_key) or "", None)
-                if src_key in _DATE_KEYS:
-                    d = _as_date(v)
-                    v = d.isoformat() if d else ""
-                elif v is None:
-                    v = ""
-                if src_key == 90 and v == "" and parsed.currency:
-                    v = parsed.currency      # back-fill from the meta block
-            rec[col] = v
-        rec["Source File"]  = parsed.source_name
-        rec["Published By"] = published_by
-        rec["Published At"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
+        for col, src_key, _fmt, _al, _blk in DB_SCHEMA:
+            name = " ".join(col.split())
+            v = _db_value(parsed, row, src_key, key_to_src)
+            if isinstance(v, (date, datetime)):
+                v = (v.date() if isinstance(v, datetime) else v).isoformat()
+            rec[name] = "" if v is None else v
         out_rows.append(rec)
+    return pd.DataFrame(out_rows,
+                        columns=[" ".join(c.split()) for c, *_ in DB_SCHEMA])
 
-    return pd.DataFrame(out_rows, columns=[c for c, _ in DB_SCHEMA]
-                        + ["Source File", "Published By", "Published At"])
+
+def _key_to_src(parsed: ParsedInput) -> dict[int, str | None]:
+    """Input-file column name (cleaned, as read) for each record key."""
+    return {key: next((x for x in parsed.headers if x.lower() == h.lower()), None)
+            for h, key in EXPECTED_HEADERS}
+
+
+def _db_value(parsed: ParsedInput, row: dict, src_key,
+              key_to_src: dict) -> Any:
+    if src_key == "gp":
+        return parsed.gp
+    if src_key == "tr_date":
+        return parsed.as_of
+    if src_key == "fund_ccy":
+        return parsed.currency or ""
+    if src_key == "follow_on":            # preview only; the workbook carries
+        t = _safe_num(row.get(key_to_src.get(16) or ""))   # the live formula
+        i = _safe_num(row.get(key_to_src.get(13) or ""))
+        return t - i if (t is not None and i is not None) else None
+    v = row.get(key_to_src.get(src_key) or "", None)
+    if src_key in _DATE_KEYS:
+        return _as_date(v)
+    if src_key == 90 and (v is None or v == "") and parsed.currency:
+        return parsed.currency            # back-fill from the meta block
+    return v
+
+
+def _safe_num(v: Any) -> float | None:
+    try:
+        return float(str(v).replace(",", "")) if v not in (None, "") else None
+    except (TypeError, ValueError):
+        return None
+
+
+def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
+                            published_at: datetime | None = None) -> bytes:
+    """The published file: a workbook whose "Deal Level Inputs" sheet matches
+    the team's uploader sheet cell for cell (note row, black/entry/exit
+    header blocks, blue-on-light-blue centred data cells with hair borders,
+    the live Follow-On formula, the GrossDealLevelInput table). Provenance
+    goes on a hidden "_Publish" sheet, keeping the visible sheet identical
+    to the template."""
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, Color
+    from openpyxl.worksheet.table import Table, TableStyleInfo
+    from openpyxl.utils import get_column_letter
+
+    published_at = published_at or datetime.now()
+    key_to_src = _key_to_src(parsed)
+
+    hdr_black_fill = PatternFill("solid", fgColor=Color(theme=1))
+    hdr_entry_fill = PatternFill("solid", fgColor=Color(theme=3, tint=0.6))
+    hdr_exit_fill  = PatternFill("solid", fgColor=Color(theme=9, tint=0.8))
+    hdr_white_font = Font(name="Arial", size=10, bold=True, color="FFFFFF")
+    hdr_dark_font  = Font(name="Arial", size=10, bold=True)
+    data_font      = Font(name="Arial", size=10, color="0000FF")
+    data_fill      = PatternFill("solid", fgColor=Color(theme=4, tint=0.8))
+    hair           = Border(left=Side(style="hair"), right=Side(style="hair"),
+                            top=Side(style="hair"), bottom=Side(style="hair"))
+
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Deal Level Inputs"
+    ws.sheet_view.showGridLines = False
+
+    ws["B2"] = _DB_NOTE
+    ws["B2"].font = Font(name="Calibri", size=14, bold=True, color="C00000")
+    ws.row_dimensions[2].height = 18.75
+    ws.row_dimensions[3].height = 35.45
+
+    ws.column_dimensions["A"].width = 4.1
+    for j, (hdr, _src, _fmt, al, blk) in enumerate(DB_SCHEMA):
+        cell = ws.cell(row=3, column=2 + j, value=hdr)
+        cell.fill = {"id": hdr_black_fill, "entry": hdr_entry_fill,
+                     "exit": hdr_exit_fill}[blk]
+        cell.font = hdr_white_font if blk == "id" else hdr_dark_font
+        cell.alignment = Alignment(horizontal="left" if al == "left" else "center",
+                                   vertical="center", wrap_text=True)
+        ws.column_dimensions[get_column_letter(2 + j)].width = _DB_COL_WIDTHS[j]
+
+    fo_formula = ('=GrossDealLevelInput[[#This Row],'
+                  '[Total Invested Capital (mlns)]]-GrossDealLevelInput'
+                  '[[#This Row],[Initial Invested Capital (mlns)]]')
+    for i, row in enumerate(parsed.rows):
+        r = 4 + i
+        for j, (_hdr, src_key, fmt, al, _blk) in enumerate(DB_SCHEMA):
+            if src_key == "follow_on":
+                cell = ws.cell(row=r, column=2 + j, value=fo_formula)
+            else:
+                v = _db_value(parsed, row, src_key, key_to_src)
+                cell = ws.cell(row=r, column=2 + j,
+                               value=None if v in (None, "") else v)
+            if fmt != "General":
+                cell.number_format = fmt
+            cell.font = data_font
+            cell.fill = data_fill
+            cell.border = hair
+            cell.alignment = Alignment(horizontal=al)
+
+    n = max(len(parsed.rows), 1)
+    last = get_column_letter(1 + len(DB_SCHEMA))
+    tbl = Table(displayName="GrossDealLevelInput", ref=f"B3:{last}{3 + n}")
+    tbl.tableStyleInfo = TableStyleInfo(showRowStripes=True)
+    ws.add_table(tbl)
+    wb.calculation.fullCalcOnLoad = True
+
+    meta = wb.create_sheet("_Publish")
+    meta["A1"] = "Source File";  meta["B1"] = parsed.source_name
+    meta["A2"] = "Published By"; meta["B2"] = published_by
+    meta["A3"] = "Published At"; meta["B3"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
+    meta.sheet_state = "hidden"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
 
 
 def snapshot_filename(parsed: ParsedInput) -> str:
     gp = re.sub(r"[\\/:*?\"<>|]", "-", parsed.gp).strip() or "GP"
     as_of = parsed.as_of.isoformat() if parsed.as_of else "undated"
-    return f"{gp} - {as_of}.csv"
+    return f"{gp} - {as_of}.xlsx"
 
 
 def publish(parsed: ParsedInput, db_dir: str | Path,
@@ -413,25 +527,54 @@ def publish(parsed: ParsedInput, db_dir: str | Path,
     target = db_dir / snapshot_filename(parsed)
     replaced = target.exists()
 
-    df = to_long_table(parsed, published_by=published_by)
-    tmp = target.with_suffix(".csv.tmp")
-    df.to_csv(tmp, index=False, encoding="utf-8-sig")
+    payload = build_snapshot_workbook(parsed, published_by=published_by)
+    tmp = target.with_suffix(".xlsx.tmp")
+    tmp.write_bytes(payload)
     os.replace(tmp, target)
     return target, replaced
 
 
 def list_snapshots(db_dir: str | Path) -> pd.DataFrame:
-    """Inventory of the database folder: one row per snapshot CSV."""
+    """Inventory of the database folder: one row per snapshot workbook
+    (legacy CSV snapshots are still listed)."""
     db_dir = Path(db_dir).expanduser()
     rows = []
     if db_dir.is_dir():
+        for p in sorted(db_dir.glob("*.xlsx")):
+            if p.name.startswith("~$"):
+                continue
+            try:
+                wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
+                ws = wb["Deal Level Inputs"]
+                n = 0
+                as_of = gp = ""
+                for r in ws.iter_rows(min_row=4, min_col=2, max_col=6,
+                                      values_only=True):
+                    if all(v in (None, "") for v in r):
+                        break
+                    if n == 0:
+                        as_of = r[0].date().isoformat() if isinstance(r[0], datetime) \
+                            else (r[0].isoformat() if isinstance(r[0], date) else str(r[0] or ""))
+                        gp = str(r[1] or "")
+                    n += 1
+                by = at = ""
+                if "_Publish" in wb.sheetnames:
+                    m = wb["_Publish"]
+                    by = str(m["B2"].value or "")
+                    at = str(m["B3"].value or "")
+                wb.close()
+                rows.append({"File": p.name, "GP": gp, "As of": as_of,
+                             "Deals": n, "Published": at, "By": by})
+            except Exception as e:
+                rows.append({"File": p.name, "GP": f"(unreadable: {e})",
+                             "As of": "", "Deals": 0, "Published": "", "By": ""})
         for p in sorted(db_dir.glob("*.csv")):
             try:
                 df = pd.read_csv(p, dtype=str, keep_default_na=False)
                 first = df.iloc[0] if len(df) else {}
                 rows.append({
                     "File": p.name,
-                    "GP": first.get("GP Name", ""),
+                    "GP": first.get("GP Name", first.get("GP", "")),
                     "As of": first.get("TR Date",
                                        first.get("Track Record Date", "")),
                     "Deals": len(df),

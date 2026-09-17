@@ -186,7 +186,7 @@ def _render_publish_page() -> None:
     st.markdown(
         "The database only takes **verified** data. First correct and check the "
         "downloaded Deal Level Input file in Excel; when you are sure the "
-        "numbers are right, publish that file here. Each publish writes one CSV "
+        "numbers are right, publish that file here. Each publish writes one Excel "
         "snapshot per GP per as-of date into the database folder — re-publishing "
         "the same GP and date **replaces** its snapshot, so corrections never "
         "create duplicates. Power BI reads the folder and combines every "

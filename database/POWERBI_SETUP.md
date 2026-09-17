@@ -48,13 +48,13 @@ can move the files and re-point the folder later.
 1. Power BI Desktop → **Get Data → SharePoint folder** → enter the *site*
    URL (e.g. `https://yourorg.sharepoint.com/sites/Investments`) → sign in.
 2. Filter the file list to the `TR Database` folder → **Combine &
-   Transform**. Power Query stacks every CSV into one table.
-3. In Power Query, set column types once: `TR Date`, `Investment Date`,
-   `Exit Date` → *Date* (values are ISO `YYYY-MM-DD`); monetary columns,
+   Transform**. Power Query stacks every workbook's Deal Level Inputs sheet into one table.
+3. In Power Query, set column types once: `Track Record Date`, `Investment Date`,
+   `Exit Date`, `Signing Date` → *Date* (values are ISO `YYYY-MM-DD`); monetary columns,
    `Gross TVPI`, `Gross IRR` → *Decimal Number*. Then **Close & Apply**.
 
 **Latest snapshot per GP** (most dashboards want this): add a Power Query
-step — *Group By* `GP Name` with aggregation *Max* of `TR Date`,
+step — *Group By* `GP` with aggregation *Max* of `Track Record Date`,
 then merge that back and keep only matching rows. Keep the ungrouped table
 too if you want "how did this GP's track record change over time" views.
 
