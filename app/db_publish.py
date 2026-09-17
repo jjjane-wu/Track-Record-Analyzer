@@ -136,8 +136,8 @@ _DB_COL_WIDTHS = [19.6, 32.3, 15.9, 13.0, 32.6, 16.9, 18.1, 13.0, 28.4, 27.7,
                   16.0, 13.0, 13.0, 16.1, 13.0, 20.0, 15.0, 20.0, 14.0, 18.0,
                   13.0, 13.0, 15.0, 11.0, 13.0, 17.4, 17.3, 13.4, 17.4, 15.0,
                   16.9, 20.4, 18.1, 17.4]
-_DB_NOTE = ("Note - leave cells blank if no value exists, don't enter 0 for "
-            "exit date if a asset is unrealized for example")
+# (The template's note row is guidance for the writer, not part of the
+# database file: cells with no value are written truly blank.)
 
 
 
@@ -456,32 +456,29 @@ def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
     ws.title = "Deal Level Inputs"
     ws.sheet_view.showGridLines = False
 
-    ws["B2"] = _DB_NOTE
-    ws["B2"].font = Font(name="Calibri", size=14, bold=True, color="C00000")
-    ws.row_dimensions[2].height = 18.75
-    ws.row_dimensions[3].height = 35.45
-
-    ws.column_dimensions["A"].width = 4.1
+    # Pure flat table (per the team): header row IS row 1, data starts in
+    # column A — no title, no note row, no spacer column.
+    ws.row_dimensions[1].height = 35.45
     for j, (hdr, _src, _fmt, al, blk) in enumerate(DB_SCHEMA):
-        cell = ws.cell(row=3, column=2 + j, value=hdr)
+        cell = ws.cell(row=1, column=1 + j, value=hdr)
         cell.fill = {"id": hdr_black_fill, "entry": hdr_entry_fill,
                      "exit": hdr_exit_fill}[blk]
         cell.font = hdr_white_font if blk == "id" else hdr_dark_font
         cell.alignment = Alignment(horizontal="left" if al == "left" else "center",
                                    vertical="center", wrap_text=True)
-        ws.column_dimensions[get_column_letter(2 + j)].width = _DB_COL_WIDTHS[j]
+        ws.column_dimensions[get_column_letter(1 + j)].width = _DB_COL_WIDTHS[j]
 
     fo_formula = ('=GrossDealLevelInput[[#This Row],'
                   '[Total Invested Capital (mlns)]]-GrossDealLevelInput'
                   '[[#This Row],[Initial Invested Capital (mlns)]]')
     for i, row in enumerate(parsed.rows):
-        r = 4 + i
+        r = 2 + i
         for j, (_hdr, src_key, fmt, al, _blk) in enumerate(DB_SCHEMA):
             if src_key == "follow_on":
-                cell = ws.cell(row=r, column=2 + j, value=fo_formula)
+                cell = ws.cell(row=r, column=1 + j, value=fo_formula)
             else:
                 v = _db_value(parsed, row, src_key, key_to_src)
-                cell = ws.cell(row=r, column=2 + j,
+                cell = ws.cell(row=r, column=1 + j,
                                value=None if v in (None, "") else v)
             if fmt != "General":
                 cell.number_format = fmt
@@ -491,8 +488,8 @@ def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
             cell.alignment = Alignment(horizontal=al)
 
     n = max(len(parsed.rows), 1)
-    last = get_column_letter(1 + len(DB_SCHEMA))
-    tbl = Table(displayName="GrossDealLevelInput", ref=f"B3:{last}{3 + n}")
+    last = get_column_letter(len(DB_SCHEMA))
+    tbl = Table(displayName="GrossDealLevelInput", ref=f"A1:{last}{1 + n}")
     tbl.tableStyleInfo = TableStyleInfo(showRowStripes=True)
     ws.add_table(tbl)
     wb.calculation.fullCalcOnLoad = True
@@ -548,7 +545,7 @@ def list_snapshots(db_dir: str | Path) -> pd.DataFrame:
                 ws = wb["Deal Level Inputs"]
                 n = 0
                 as_of = gp = ""
-                for r in ws.iter_rows(min_row=4, min_col=2, max_col=6,
+                for r in ws.iter_rows(min_row=2, min_col=1, max_col=5,
                                       values_only=True):
                     if all(v in (None, "") for v in r):
                         break
