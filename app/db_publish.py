@@ -1,8 +1,9 @@
 """
 db_publish.py — Publish a *verified* Deal Level Input workbook to the database.
 
-The database is deliberately simple: a folder of CSV snapshots, one file per
-GP per as-of date ("GP_2 - 2025-09-30.csv"). Point the folder at a
+The database is deliberately simple: a folder of styled Excel snapshots in
+the team's uploader-sheet format, one file per GP per as-of date
+("GP_2 - 2025-09-30.xlsx"). Point the folder at a
 OneDrive-synced SharePoint library and every published file uploads itself;
 Power BI reads the whole folder with its SharePoint/Folder connector and
 combines the files into one long table.
@@ -513,7 +514,7 @@ def snapshot_filename(parsed: ParsedInput) -> str:
 
 def publish(parsed: ParsedInput, db_dir: str | Path,
             published_by: str = "") -> tuple[Path, bool]:
-    """Write the snapshot CSV into db_dir. Returns (path, replaced_existing).
+    """Write the snapshot workbook into db_dir. Returns (path, replaced_existing).
 
     Same GP + as-of overwrites its previous snapshot (a correction replaces,
     never duplicates). The write goes through a temp file + atomic rename so
@@ -617,7 +618,7 @@ def _main(argv: list[str]) -> int:
     import argparse
     ap = argparse.ArgumentParser(
         description="Publish a verified Deal Level Input workbook to the "
-                    "database folder (one CSV snapshot per GP per as-of date).")
+                    "database folder (one Excel snapshot per GP per as-of date).")
     ap.add_argument("input", help="Path to the verified Deal Level Input .xlsx")
     ap.add_argument("--dir", default=None,
                     help="Database folder (default: the configured folder)")

@@ -84,7 +84,7 @@ corrects and verifies the downloaded Deal Level Input in Excel, then
 uploads that file on the **Publish to database** page. The app re-parses
 it (label-located, so hand edits survive), validates it — hard errors
 (blank companies, text in numeric columns, unreadable dates) block the
-publish; soft warnings need an explicit tick — and writes **one tidy CSV
+publish; soft warnings need an explicit tick — and writes **one styled Excel
 snapshot per GP per as-of date** into the configured database folder
 (GP name, as-of date, source file, publisher, timestamp stamped on every
 row; same GP+date republish replaces its snapshot). Point the folder at a
@@ -129,7 +129,7 @@ analyst adjust it.
 
 ### Stage 3 — Schema Inference (`inferencer.py`)
 
-Maps every raw column to one of the **33 standardised fields** using
+Maps every raw column to one of the **43 standardised fields** using
 independent signals; 1–3 combine by maximum, conflicts resolve greedily:
 
 | Priority | Signal | Score range |
@@ -214,8 +214,8 @@ tabs, in order (four further tabs are currently switched off — see below):
 1. **Table of Contents** — numbered, banded list of internal hyperlinks to
    every other tab; the workbook opens here. New tabs appear automatically.
 
-2. **Deal Level Inputs** — the clean input data as *values*: 28 columns
-   (B..AC), meta block (GP Name / Track Record Date / Currency), table
+2. **Deal Level Inputs** — the clean input data as *values*: 40 columns
+   (B..AO), meta block (GP Name / Track Record Date / Currency), table
    `GrossDealLevelInput`. Every data cell is a true input: light-blue fill,
    blue font. Per the team's reference layout: a **Financials Currency**
    column (shown as **Deal Currency** on the Deal List) sits just before the
@@ -354,7 +354,7 @@ Track Record Database/
 │   ├── parser.py                     — Low-level Excel reader
 │   ├── build_output.py               — build_inputs_workbook (hand-off file) + reference all-Python builder
 │   ├── deal_list_spec.py             — Deal List schema: columns, formulas, helpers
-│   ├── db_publish.py                 — Verified-inputs → database CSV snapshots (validate + publish + CLI)
+│   ├── db_publish.py                 — Verified-inputs → styled Excel snapshots in the uploader-sheet format (validate + publish + CLI)
 │   ├── chart_template.xml            — Combo-chart blueprint (Return & Loss Ratios)
 │   ├── chart_rd.xml                  — Dispersion-chart blueprint
 │   ├── chart_pc_stacked.xml / _ser / _pie — Portfolio Construction chart blueprints

@@ -15,7 +15,7 @@ raw GP file ──► Python app (parse + map, unchanged)
         TR-Analyzer.xlsm  (this folder's modules imported once)
                     │  BuildAnalysisWorkbook()
                     ▼
-        Deal List (74-col template formulas) + analysis tabs
+        Deal List (87-col template formulas) + analysis tabs
         with REAL native pivots
 ```
 
@@ -23,7 +23,7 @@ raw GP file ──► Python app (parse + map, unchanged)
 
 | File | Role |
 |---|---|
-| `modSpec.bas` | **Generated — never edit by hand.** Deal List schema (74 columns, formulas, tag row), input column order, header block (bucket threshold tables), the 15 Return & Loss Ratios pivot specs. |
+| `modSpec.bas` | **Generated — never edit by hand.** Deal List schema (87 columns, formulas, tag row), input column order, header block (bucket threshold tables), the 15 Return & Loss Ratios pivot specs. |
 | `generate_vba_spec.py` | The generator for `modSpec.bas` — reads `app/deal_list_spec.py` + `app/build_output.py`, so the VBA and Python versions share one schema and cannot drift. Re-run after any spec change. |
 | `modBuild.bas` | Builds the Deal List: meta, bucket helper tables, tag row, `DealLevelInput` table, all column formulas (same `in:/in0:/F:/FT:` notation as Python). |
 | `modUtil.bas` | Shared plumbing: the one pivot cache, calculated fields, meta blocks, report filters, canonical bucket ordering, blank-hiding, mini contents lists. |

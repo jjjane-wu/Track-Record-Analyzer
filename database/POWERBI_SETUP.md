@@ -6,10 +6,10 @@
 
 ## How the database works
 
-The database is a **folder of CSV files** — no server, no credentials.
+The database is a **folder of Excel files** — no server, no credentials.
 
 - Every publish from the app (sidebar → **Publish to database**) writes one
-  snapshot: `GP_2 - 2025-09-30.csv` — that GP's verified deals as of that
+  snapshot: `GP_2 - 2025-09-30.xlsx` — that GP's verified deals as of that
   reporting date, one row per deal, with GP name, as-of date, and provenance
   (source file, who published, when) stamped on every row.
 - Re-publishing the same GP + as-of date **replaces** its snapshot, so a
@@ -36,7 +36,7 @@ database folder *is* a synced SharePoint folder:
 3. In the app: **Publish to database → Database folder** → paste the local
    path of that synced folder → **Save folder**.
 
-From then on, every published CSV lands in the folder and the OneDrive
+From then on, every published snapshot lands in the folder and the OneDrive
 client uploads it to SharePoint in the background. Until SharePoint is set
 up, the default folder `database/deals/` next to the app works fine — you
 can move the files and re-point the folder later.

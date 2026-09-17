@@ -170,7 +170,8 @@ inputs tab and no links back to the input file.
 Performance, Op Performance - Unrealized — are currently switched off at
 Eric's request; they can be re-enabled later.)*
 
-For metric definitions and how to read them, see **Metric Guide.md**.
+For metric definitions — including how Loss Ratio and Impaired Invested
+Capital differ — see the metric notes in **TR-Analyzer User Manual.docx**.
 
 ---
 
