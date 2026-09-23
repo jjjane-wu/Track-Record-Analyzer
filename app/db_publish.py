@@ -1,12 +1,14 @@
 """
 db_publish.py — Publish a *verified* Deal Level Input workbook to the database.
 
-The database is deliberately simple: a folder of styled Excel snapshots in
-the team's uploader-sheet format, one file per GP per as-of date
-("GP_2 - 2025-09-30.xlsx"). Point the folder at a
-OneDrive-synced SharePoint library and every published file uploads itself;
-Power BI reads the whole folder with its SharePoint/Folder connector and
-combines the files into one long table.
+The database is deliberately simple: ONE consolidated workbook
+("TR Deal Database.xlsx") in the team's uploader-sheet format, holding every
+GP's rows together. Publishing a GP merges its rows in (same GP + as-of date
+replaces in place); nothing else is touched. Every change first copies the
+current database into a history/ subfolder, and an action log rides along on
+a hidden sheet — so any publish, delete or restore can be undone. Point the
+folder at a OneDrive-synced SharePoint library and Power BI reads the one
+workbook directly.
 
 Publishing is a separate, human-triggered step — never automatic. The app's
 parsed output may contain mapping or data errors, so the analyst first
@@ -14,9 +16,9 @@ downloads the Deal Level Input workbook, corrects and verifies it in Excel,
 and only then publishes that file here. The workbook is the single source of
 truth: the same verified file feeds both TR-Analyzer.xlsm and the database.
 
-Re-publishing the same GP + as-of date overwrites its snapshot (idempotent —
-a correction replaces the old rows, nothing duplicates). A new as-of date
-creates a new snapshot, preserving the history of the track record over time.
+Re-publishing the same GP + as-of date replaces its rows (idempotent — a
+correction replaces, nothing duplicates). A new as-of date adds alongside,
+preserving the history of the track record over time.
 
 CLI (for scripted use):
     python app/db_publish.py "path/to/[12-Aug-26 - GP_2] - Gross Deal Level Input.xlsx"
@@ -427,20 +429,81 @@ def _safe_num(v: Any) -> float | None:
         return None
 
 
-def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
-                            published_at: datetime | None = None) -> bytes:
-    """The published file: a workbook whose "Deal Level Inputs" sheet matches
-    the team's uploader sheet cell for cell (note row, black/entry/exit
-    header blocks, blue-on-light-blue centred data cells with hair borders,
-    the live Follow-On formula, the GrossDealLevelInput table). Provenance
-    goes on a hidden "_Publish" sheet, keeping the visible sheet identical
-    to the template."""
+DB_FILENAME  = "TR Deal Database.xlsx"
+HISTORY_DIR  = "history"
+DB_SHEET     = "Deal Level Inputs"
+LOG_SHEET    = "_Log"
+MAX_BACKUPS  = 30
+
+_HDR_FLAT = [" ".join(h.split()) for h, *_ in DB_SCHEMA]
+_FOLLOW_ON_COL = "Follow-On Invested Capital (mlns)"
+_LOG_COLS = ["When", "Action", "GP", "As of", "Rows", "By", "Source File"]
+
+
+def db_path(db_dir: str | Path) -> Path:
+    return Path(db_dir).expanduser() / DB_FILENAME
+
+
+def _check_not_open(path: Path) -> None:
+    lock = path.parent / ("~$" + path.name)
+    if lock.exists():
+        raise RuntimeError(
+            f"'{path.name}' is open in Excel — close it, then try again.")
+
+
+def _rows_from_parsed(parsed: ParsedInput) -> list[dict[str, Any]]:
+    """Native-value rows in DB_SCHEMA order (Follow-On left None — it is a
+    live formula in the workbook)."""
+    key_to_src = _key_to_src(parsed)
+    out = []
+    for row in parsed.rows:
+        rec = {}
+        for (col, src_key, _f, _a, _b), flat in zip(DB_SCHEMA, _HDR_FLAT):
+            v = None if src_key == "follow_on" else _db_value(parsed, row,
+                                                              src_key, key_to_src)
+            rec[flat] = None if v in (None, "") else v
+        out.append(rec)
+    return out
+
+
+def _read_database(path: Path) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    """(rows, log) from the consolidated workbook; ([], []) if absent."""
+    if not path.exists():
+        return [], []
+    wb = openpyxl.load_workbook(path, read_only=True)
+    ws = wb[DB_SHEET]
+    rows: list[dict[str, Any]] = []
+    for r in ws.iter_rows(min_row=2, max_col=len(_HDR_FLAT), values_only=True):
+        if all(v in (None, "") for v in r):
+            continue
+        rec = dict(zip(_HDR_FLAT, r))
+        rec[_FOLLOW_ON_COL] = None            # formula cell — re-emitted on write
+        rows.append(rec)
+    log: list[dict[str, Any]] = []
+    if LOG_SHEET in wb.sheetnames:
+        for r in wb[LOG_SHEET].iter_rows(min_row=2, max_col=len(_LOG_COLS),
+                                         values_only=True):
+            if any(v not in (None, "") for v in r):
+                log.append(dict(zip(_LOG_COLS, r)))
+    wb.close()
+    return rows, log
+
+
+def _norm_as_of(v: Any) -> str:
+    d = _as_date(v)
+    return d.isoformat() if d else str(v or "")
+
+
+def _write_database(path: Path, rows: list[dict[str, Any]],
+                    log: list[dict[str, Any]]) -> None:
+    """One styled workbook in the uploader-sheet format holding every GP's
+    rows, with the action log on a hidden sheet. Atomic replace."""
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side, Color
     from openpyxl.worksheet.table import Table, TableStyleInfo
     from openpyxl.utils import get_column_letter
 
-    published_at = published_at or datetime.now()
-    key_to_src = _key_to_src(parsed)
+    rows = sorted(rows, key=lambda r: (str(r.get("GP") or "").lower(),
+                                       _norm_as_of(r.get("Track Record Date"))))
 
     hdr_black_fill = PatternFill("solid", fgColor=Color(theme=1))
     hdr_entry_fill = PatternFill("solid", fgColor=Color(theme=3, tint=0.6))
@@ -454,11 +517,8 @@ def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
 
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.title = "Deal Level Inputs"
+    ws.title = DB_SHEET
     ws.sheet_view.showGridLines = False
-
-    # Pure flat table (per the team): header row IS row 1, data starts in
-    # column A — no title, no note row, no spacer column.
     ws.row_dimensions[1].height = 35.45
     for j, (hdr, _src, _fmt, al, blk) in enumerate(DB_SCHEMA):
         cell = ws.cell(row=1, column=1 + j, value=hdr)
@@ -472,15 +532,13 @@ def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
     fo_formula = ('=GrossDealLevelInput[[#This Row],'
                   '[Total Invested Capital (mlns)]]-GrossDealLevelInput'
                   '[[#This Row],[Initial Invested Capital (mlns)]]')
-    for i, row in enumerate(parsed.rows):
+    for i, rec in enumerate(rows):
         r = 2 + i
-        for j, (_hdr, src_key, fmt, al, _blk) in enumerate(DB_SCHEMA):
-            if src_key == "follow_on":
-                cell = ws.cell(row=r, column=1 + j, value=fo_formula)
-            else:
-                v = _db_value(parsed, row, src_key, key_to_src)
-                cell = ws.cell(row=r, column=1 + j,
-                               value=None if v in (None, "") else v)
+        for j, ((_hdr, src_key, fmt, al, _blk), flat) in enumerate(
+                zip(DB_SCHEMA, _HDR_FLAT)):
+            v = fo_formula if src_key == "follow_on" else rec.get(flat)
+            cell = ws.cell(row=r, column=1 + j,
+                           value=None if v in (None, "") else v)
             if fmt != "General":
                 cell.number_format = fmt
             cell.font = data_font
@@ -488,102 +546,188 @@ def build_snapshot_workbook(parsed: ParsedInput, published_by: str = "",
             cell.border = hair
             cell.alignment = Alignment(horizontal=al)
 
-    n = max(len(parsed.rows), 1)
+    n = max(len(rows), 1)
     last = get_column_letter(len(DB_SCHEMA))
     tbl = Table(displayName="GrossDealLevelInput", ref=f"A1:{last}{1 + n}")
     tbl.tableStyleInfo = TableStyleInfo(showRowStripes=True)
     ws.add_table(tbl)
     wb.calculation.fullCalcOnLoad = True
 
-    meta = wb.create_sheet("_Publish")
-    meta["A1"] = "Source File";  meta["B1"] = parsed.source_name
-    meta["A2"] = "Published By"; meta["B2"] = published_by
-    meta["A3"] = "Published At"; meta["B3"] = published_at.strftime("%Y-%m-%d %H:%M:%S")
-    meta.sheet_state = "hidden"
+    lg = wb.create_sheet(LOG_SHEET)
+    for j, h in enumerate(_LOG_COLS):
+        lg.cell(row=1, column=1 + j, value=h).font = Font(bold=True)
+    for i, entry in enumerate(log):
+        for j, h in enumerate(_LOG_COLS):
+            lg.cell(row=2 + i, column=1 + j, value=entry.get(h))
+    lg.sheet_state = "hidden"
 
+    path.parent.mkdir(parents=True, exist_ok=True)
     buf = io.BytesIO()
     wb.save(buf)
-    return buf.getvalue()
+    tmp = path.with_suffix(".xlsx.tmp")
+    tmp.write_bytes(buf.getvalue())
+    os.replace(tmp, path)
 
 
-def snapshot_filename(parsed: ParsedInput) -> str:
-    gp = re.sub(r"[\\/:*?\"<>|]", "-", parsed.gp).strip() or "GP"
-    as_of = parsed.as_of.isoformat() if parsed.as_of else "undated"
-    return f"{gp} - {as_of}.xlsx"
+def _backup(db_dir: str | Path, label: str) -> Path | None:
+    """Copy the current database into history/ before a change; prune old
+    backups beyond MAX_BACKUPS."""
+    src = db_path(db_dir)
+    if not src.exists():
+        return None
+    hist = Path(db_dir).expanduser() / HISTORY_DIR
+    hist.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y-%m-%d %H%M%S")
+    safe = re.sub(r"[\\/:*?\"<>|]", "-", label)[:60]
+    dest = hist / f"{stamp} — before {safe}.xlsx"
+    dest.write_bytes(src.read_bytes())
+    backups = sorted(hist.glob("*.xlsx"))
+    for old in backups[:-MAX_BACKUPS]:
+        old.unlink()
+    return dest
+
+
+def _log_entry(action: str, gp: str, as_of: Any, n: int, by: str,
+               source: str = "") -> dict[str, Any]:
+    return {"When": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Action": action, "GP": gp, "As of": _norm_as_of(as_of),
+            "Rows": n, "By": by, "Source File": source}
+
+
+def _absorb_legacy(db_dir: str | Path, rows: list[dict[str, Any]],
+                   log: list[dict[str, Any]]) -> None:
+    """Fold old per-GP snapshot files (they carry a _Publish sheet) into the
+    consolidated rows, then archive them under history/."""
+    d = Path(db_dir).expanduser()
+    hist = d / HISTORY_DIR
+    have = {(str(r.get("GP") or ""), _norm_as_of(r.get("Track Record Date")))
+            for r in rows}
+    for p in sorted(d.glob("*.xlsx")):
+        if p.name == DB_FILENAME or p.name.startswith("~$"):
+            continue
+        try:
+            wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
+            if "_Publish" not in wb.sheetnames or DB_SHEET not in wb.sheetnames:
+                wb.close(); continue
+            ws = wb[DB_SHEET]
+            added = 0
+            for r in ws.iter_rows(min_row=2, max_col=len(_HDR_FLAT),
+                                  values_only=True):
+                if all(v in (None, "") for v in r):
+                    continue
+                rec = dict(zip(_HDR_FLAT, r))
+                rec[_FOLLOW_ON_COL] = None
+                key = (str(rec.get("GP") or ""),
+                       _norm_as_of(rec.get("Track Record Date")))
+                if key in have:
+                    continue
+                rows.append(rec); added += 1
+            wb.close()
+            if added:
+                k = {(str(x.get("GP") or ""),
+                      _norm_as_of(x.get("Track Record Date")))
+                     for x in rows} - have
+                for gp, ao in k:
+                    log.append(_log_entry("absorb legacy file", gp, ao,
+                                          added, "", p.name))
+                have |= k
+            hist.mkdir(parents=True, exist_ok=True)
+            p.rename(hist / f"absorbed — {p.name}")
+        except Exception:
+            continue                      # not one of ours — leave it alone
 
 
 def publish(parsed: ParsedInput, db_dir: str | Path,
             published_by: str = "") -> tuple[Path, bool]:
-    """Write the snapshot workbook into db_dir. Returns (path, replaced_existing).
-
-    Same GP + as-of overwrites its previous snapshot (a correction replaces,
-    never duplicates). The write goes through a temp file + atomic rename so
-    a sync client never sees a half-written file.
-    """
-    db_dir = Path(db_dir).expanduser()
-    db_dir.mkdir(parents=True, exist_ok=True)
-    target = db_dir / snapshot_filename(parsed)
-    replaced = target.exists()
-
-    payload = build_snapshot_workbook(parsed, published_by=published_by)
-    tmp = target.with_suffix(".xlsx.tmp")
-    tmp.write_bytes(payload)
-    os.replace(tmp, target)
+    """Merge the verified input into the consolidated database. Rows for the
+    same GP + as-of date are replaced; every other GP's rows are untouched.
+    The previous database is backed up under history/ first."""
+    target = db_path(db_dir)
+    _check_not_open(target)
+    rows, log = _read_database(target)
+    _absorb_legacy(db_dir, rows, log)
+    gp, as_of = parsed.gp, _norm_as_of(parsed.as_of)
+    before = len(rows)
+    rows = [r for r in rows
+            if not (str(r.get("GP") or "") == gp
+                    and _norm_as_of(r.get("Track Record Date")) == as_of)]
+    replaced = len(rows) < before
+    _backup(db_dir, f"publish {gp} {as_of}")
+    new_rows = _rows_from_parsed(parsed)
+    rows.extend(new_rows)
+    log.append(_log_entry("replace" if replaced else "publish", gp,
+                          parsed.as_of, len(new_rows), published_by,
+                          parsed.source_name))
+    _write_database(target, rows, log)
     return target, replaced
 
 
-def list_snapshots(db_dir: str | Path) -> pd.DataFrame:
-    """Inventory of the database folder: one row per snapshot workbook
-    (legacy CSV snapshots are still listed)."""
-    db_dir = Path(db_dir).expanduser()
+def delete_snapshot(db_dir: str | Path, gp: str, as_of: str,
+                    deleted_by: str = "") -> int:
+    """Remove one GP + as-of date's rows from the database (backed up first).
+    Returns the number of rows removed."""
+    target = db_path(db_dir)
+    _check_not_open(target)
+    rows, log = _read_database(target)
+    keep = [r for r in rows
+            if not (str(r.get("GP") or "") == gp
+                    and _norm_as_of(r.get("Track Record Date")) == as_of)]
+    removed = len(rows) - len(keep)
+    if removed == 0:
+        return 0
+    _backup(db_dir, f"delete {gp} {as_of}")
+    log.append(_log_entry("delete", gp, as_of, removed, deleted_by))
+    _write_database(target, keep, log)
+    return removed
+
+
+def list_backups(db_dir: str | Path) -> pd.DataFrame:
+    hist = Path(db_dir).expanduser() / HISTORY_DIR
     rows = []
-    if db_dir.is_dir():
-        for p in sorted(db_dir.glob("*.xlsx")):
-            if p.name.startswith("~$"):
-                continue
-            try:
-                wb = openpyxl.load_workbook(p, read_only=True, data_only=True)
-                ws = wb["Deal Level Inputs"]
-                n = 0
-                as_of = gp = ""
-                for r in ws.iter_rows(min_row=2, min_col=1, max_col=5,
-                                      values_only=True):
-                    if all(v in (None, "") for v in r):
-                        break
-                    if n == 0:
-                        as_of = r[0].date().isoformat() if isinstance(r[0], datetime) \
-                            else (r[0].isoformat() if isinstance(r[0], date) else str(r[0] or ""))
-                        gp = str(r[1] or "")
-                    n += 1
-                by = at = ""
-                if "_Publish" in wb.sheetnames:
-                    m = wb["_Publish"]
-                    by = str(m["B2"].value or "")
-                    at = str(m["B3"].value or "")
-                wb.close()
-                rows.append({"File": p.name, "GP": gp, "As of": as_of,
-                             "Deals": n, "Published": at, "By": by})
-            except Exception as e:
-                rows.append({"File": p.name, "GP": f"(unreadable: {e})",
-                             "As of": "", "Deals": 0, "Published": "", "By": ""})
-        for p in sorted(db_dir.glob("*.csv")):
-            try:
-                df = pd.read_csv(p, dtype=str, keep_default_na=False)
-                first = df.iloc[0] if len(df) else {}
-                rows.append({
-                    "File": p.name,
-                    "GP": first.get("GP Name", first.get("GP", "")),
-                    "As of": first.get("TR Date",
-                                       first.get("Track Record Date", "")),
-                    "Deals": len(df),
-                    "Published": first.get("Published At", ""),
-                    "By": first.get("Published By", ""),
-                })
-            except Exception as e:
-                rows.append({"File": p.name, "GP": f"(unreadable: {e})",
-                             "As of": "", "Deals": 0, "Published": "", "By": ""})
-    return pd.DataFrame(rows,
-                        columns=["File", "GP", "As of", "Deals", "Published", "By"])
+    if hist.is_dir():
+        for p in sorted(hist.glob("*.xlsx"), reverse=True):
+            rows.append({"Backup": p.name,
+                         "Size (KB)": round(p.stat().st_size / 1024)})
+    return pd.DataFrame(rows, columns=["Backup", "Size (KB)"])
+
+
+def restore_backup(db_dir: str | Path, backup_name: str,
+                   restored_by: str = "") -> Path:
+    """Make a backup of the database as it stands, then replace it with the
+    chosen history copy — so a restore is itself undoable."""
+    target = db_path(db_dir)
+    _check_not_open(target)
+    src = Path(db_dir).expanduser() / HISTORY_DIR / backup_name
+    if not src.is_file():
+        raise FileNotFoundError(backup_name)
+    _backup(db_dir, f"restore {backup_name[:40]}")
+    rows, log = _read_database(src)
+    log.append(_log_entry("restore", "", "", len(rows), restored_by,
+                          backup_name))
+    _write_database(target, rows, log)
+    return target
+
+
+def list_snapshots(db_dir: str | Path) -> pd.DataFrame:
+    """Database contents grouped per GP + as-of date, with the latest log
+    entry's who/when."""
+    rows, log = _read_database(db_path(db_dir))
+    groups: dict[tuple[str, str], int] = {}
+    for r in rows:
+        key = (str(r.get("GP") or ""), _norm_as_of(r.get("Track Record Date")))
+        groups[key] = groups.get(key, 0) + 1
+    latest: dict[tuple[str, str], dict] = {}
+    for e in log:
+        if e.get("Action") in ("publish", "replace", "absorb legacy file"):
+            latest[(str(e.get("GP") or ""), str(e.get("As of") or ""))] = e
+    out = []
+    for (gp, as_of), n in sorted(groups.items()):
+        e = latest.get((gp, as_of), {})
+        out.append({"GP": gp, "As of": as_of, "Deals": n,
+                    "Published": str(e.get("When") or ""),
+                    "By": str(e.get("By") or "")})
+    return pd.DataFrame(out, columns=["GP", "As of", "Deals", "Published", "By"])
+
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -618,7 +762,7 @@ def _main(argv: list[str]) -> int:
     import argparse
     ap = argparse.ArgumentParser(
         description="Publish a verified Deal Level Input workbook to the "
-                    "database folder (one Excel snapshot per GP per as-of date).")
+                    "consolidated team database (one workbook, all GPs; the same GP + as-of date is replaced in place).")
     ap.add_argument("input", help="Path to the verified Deal Level Input .xlsx")
     ap.add_argument("--dir", default=None,
                     help="Database folder (default: the configured folder)")
@@ -644,9 +788,10 @@ def _main(argv: list[str]) -> int:
 
     db_dir = args.dir or load_db_config()["deals_dir"]
     path, replaced = publish(parsed, db_dir, published_by=args.by)
-    verb = "Replaced snapshot" if replaced else "Published"
+    verb = "Replaced in" if replaced else "Published to"
     print(f"{verb}: {path}  ({parsed.gp}, as of {parsed.as_of}, "
-          f"{len(parsed.rows)} deals)")
+          f"{len(parsed.rows)} deals; previous version backed up under "
+          f"{HISTORY_DIR}/)")
     return 0
 
 

@@ -121,17 +121,19 @@ so nothing enters the database until a person has checked it.
      dates) **block publishing** — fix them in Excel and upload again.
    - **Warnings** (blank funds, odd-looking IRRs, duplicate deals) don't
      block, but you must tick a box confirming you've checked them.
-4. Click **Publish**. One Excel snapshot is written per GP per as-of date
-   (`GP_2 - 2025-09-30.xlsx`) into the database folder, stamped with who
-   published it and when. Every snapshot is the team's **GP TR Database
-   Uploader Input Sheet**, formatting included — same columns, colours and
-   layout, with the track record date and GP name on every row — so Power
-   BI can stack all GPs into one table with no reshaping.
+4. Click **Publish**. Your GP's rows merge into the one consolidated
+   database workbook (`TR Deal Database.xlsx`) — the team's **GP TR
+   Database Uploader Input Sheet** format, colours and all, every row
+   carrying its track record date and GP name — which Power BI reads
+   directly.
 
-Re-publishing the same GP and date **replaces** its snapshot — corrections
-never create duplicates. A newer reporting date adds a new snapshot, so the
-GP's history is kept. The page also lists everything currently in the
-database.
+Re-publishing the same GP and date **replaces** those rows only —
+corrections never create duplicates, and no other GP is touched. A newer
+reporting date adds alongside, so the GP's history is kept. Nothing is
+one-way: before every change the current database is saved into a
+`history/` folder, and the page can **remove a GP snapshot** or **restore
+the database to any earlier state** (each of those is backed up too). The
+page also lists everything currently in the database.
 
 The database folder is just a folder. Once it points at the team's
 OneDrive-synced SharePoint folder (**Publish to database → Database

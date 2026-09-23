@@ -84,7 +84,7 @@ corrects and verifies the downloaded Deal Level Input in Excel, then
 uploads that file on the **Publish to database** page. The app re-parses
 it (label-located, so hand edits survive), validates it — hard errors
 (blank companies, text in numeric columns, unreadable dates) block the
-publish; soft warnings need an explicit tick — and writes **one styled Excel
+publish; soft warnings need an explicit tick — and merges into **one consolidated Excel
 snapshot per GP per as-of date** into the configured database folder
 (GP name, as-of date, source file, publisher, timestamp stamped on every
 row; same GP+date republish replaces its snapshot). Point the folder at a
@@ -354,7 +354,7 @@ Track Record Database/
 │   ├── parser.py                     — Low-level Excel reader
 │   ├── build_output.py               — build_inputs_workbook (hand-off file) + reference all-Python builder
 │   ├── deal_list_spec.py             — Deal List schema: columns, formulas, helpers
-│   ├── db_publish.py                 — Verified-inputs → styled Excel snapshots in the uploader-sheet format (validate + publish + CLI)
+│   ├── db_publish.py                 — Verified-inputs → one consolidated uploader-format database workbook (validate + publish/delete/restore + history backups + CLI)
 │   ├── chart_template.xml            — Combo-chart blueprint (Return & Loss Ratios)
 │   ├── chart_rd.xml                  — Dispersion-chart blueprint
 │   ├── chart_pc_stacked.xml / _ser / _pie — Portfolio Construction chart blueprints

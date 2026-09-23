@@ -6,21 +6,25 @@
 
 ## How the database works
 
-The database is a **folder of Excel files** — no server, no credentials.
+The database is **one Excel workbook** — `TR Deal Database.xlsx` — holding
+every GP's verified deals together, one row per deal, with the track record
+date and GP name on every row. No server, no credentials.
 
-- Every publish from the app (sidebar → **Publish to database**) writes one
-  snapshot: `GP_2 - 2025-09-30.xlsx` — that GP's verified deals as of that
-  reporting date, one row per deal, with GP name, as-of date, and provenance
-  (source file, who published, when) stamped on every row.
-- Re-publishing the same GP + as-of date **replaces** its snapshot, so a
-  correction never duplicates rows. A new as-of date adds a new snapshot, so
-  the history of a GP's track record is preserved over time.
+- Every publish from the app (sidebar → **Publish to database**) merges that
+  GP's rows into the workbook. Re-publishing the same GP + as-of date
+  **replaces** those rows only — a correction never duplicates, and no other
+  GP is touched. A new as-of date adds alongside, so the history of a GP's
+  track record is preserved over time.
+- **Every change is reversible.** Before each publish, remove or restore,
+  the current workbook is copied into the `history/` subfolder; the app's
+  Publish page can remove a GP snapshot or put the whole database back to
+  any earlier state. An action log (who / what / when) rides along on a
+  hidden `_Log` sheet inside the workbook.
 - Only **verified** data enters: the analyst corrects and checks the Deal
   Level Input workbook in Excel first; the app validates it again (blocking
   on hard errors) before writing anything.
 
-Power BI reads the whole folder and combines the files into one long deal
-table.
+Power BI reads the one workbook directly.
 
 ---
 
@@ -36,19 +40,22 @@ database folder *is* a synced SharePoint folder:
 3. In the app: **Publish to database → Database folder** → paste the local
    path of that synced folder → **Save folder**.
 
-From then on, every published snapshot lands in the folder and the OneDrive
-client uploads it to SharePoint in the background. Until SharePoint is set
-up, the default folder `database/deals/` next to the app works fine — you
-can move the files and re-point the folder later.
+From then on, every publish updates `TR Deal Database.xlsx` in the folder
+and the OneDrive client uploads it to SharePoint in the background. Until
+SharePoint is set up, the default folder `database/deals/` next to the app
+works fine — you can move the file and re-point the folder later. One
+caveat of a single shared workbook: the app cannot write while someone has
+the file open in Excel — it will say so and wait for you to close it.
 
 ---
 
 ## Connect Power BI
 
-1. Power BI Desktop → **Get Data → SharePoint folder** → enter the *site*
-   URL (e.g. `https://yourorg.sharepoint.com/sites/Investments`) → sign in.
-2. Filter the file list to the `TR Database` folder → **Combine &
-   Transform**. Power Query stacks every workbook's Deal Level Inputs sheet into one table.
+1. Power BI Desktop → **Get Data → Web** → paste the SharePoint link to
+   `TR Deal Database.xlsx` (or **Get Data → Excel workbook** and browse to
+   the synced local copy) → sign in.
+2. Pick the **Deal Level Inputs** sheet (or the `GrossDealLevelInput`
+   table) → **Transform Data**. One table, no combining step needed.
 3. In Power Query, set column types once: `Track Record Date`, `Investment Date`,
    `Exit Date`, `Signing Date` → *Date* (values are ISO `YYYY-MM-DD`); monetary columns,
    `Gross TVPI`, `Gross IRR` → *Decimal Number*. Then **Close & Apply**.

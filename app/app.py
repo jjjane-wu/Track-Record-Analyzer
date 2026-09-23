@@ -186,11 +186,12 @@ def _render_publish_page() -> None:
     st.markdown(
         "The database only takes **verified** data. First correct and check the "
         "downloaded Deal Level Input file in Excel; when you are sure the "
-        "numbers are right, publish that file here. Each publish writes one Excel "
-        "snapshot per GP per as-of date into the database folder — re-publishing "
-        "the same GP and date **replaces** its snapshot, so corrections never "
-        "create duplicates. Power BI reads the folder and combines every "
-        "snapshot into one long deal table."
+        "numbers are right, publish that file here. All GPs live together in one "
+        "consolidated workbook — publishing merges your GP's rows in, and "
+        "re-publishing the same GP and as-of date **replaces** those rows only. "
+        "Every change is backed up first and logged, so a publish, delete or "
+        "restore can always be undone below. Power BI reads the one workbook "
+        "directly."
     )
 
     cfg = db_publish.load_db_config()
@@ -240,11 +241,14 @@ def _render_publish_page() -> None:
                 st.dataframe(db_publish.to_long_table(parsed).head(10),
                              use_container_width=True, hide_index=True)
 
-            snap_name = db_publish.snapshot_filename(parsed)
-            target = Path(cfg["deals_dir"]).expanduser() / snap_name
-            if target.exists():
-                st.info(f"A snapshot for this GP and as-of date already exists — "
-                        f"publishing will replace **{snap_name}**.")
+            existing = db_publish.list_snapshots(cfg["deals_dir"])
+            as_of_s = parsed.as_of.isoformat() if parsed.as_of else ""
+            match = existing[(existing["GP"] == parsed.gp)
+                             & (existing["As of"] == as_of_s)] if len(existing) else []
+            if len(match):
+                st.info(f"The database already holds **{int(match.iloc[0]['Deals'])} "
+                        f"rows** for {parsed.gp} as of {as_of_s} — publishing "
+                        "replaces them (the current database is backed up first).")
 
             confirm_ok = True
             if warnings and not errors:
@@ -257,15 +261,16 @@ def _render_publish_page() -> None:
             if errors:
                 st.caption("The errors above must be fixed in Excel before "
                            "this file can be published.")
-            if st.button(f"Publish {snap_name} →", type="primary",
+            if st.button("Publish to database →", type="primary",
                          disabled=bool(errors) or not confirm_ok):
                 try:
                     path, replaced = db_publish.publish(
                         parsed, cfg["deals_dir"], published_by=by.strip())
                     st.session_state.analyst_name = by.strip()
-                    verb = "Replaced" if replaced else "Published"
+                    verb = "Replaced in" if replaced else "Added to"
                     st.success(f"{verb} **{path.name}** — {len(parsed.rows)} "
-                               f"deals → `{path.parent}`")
+                               f"deals ({parsed.gp}, as of {as_of_s}). The "
+                               "previous database is saved under history/.")
                 except Exception as e:
                     st.error(f"Publish failed: {e}")
 
@@ -274,10 +279,58 @@ def _render_publish_page() -> None:
     snaps = db_publish.list_snapshots(cfg["deals_dir"])
     if len(snaps):
         st.dataframe(snaps, use_container_width=True, hide_index=True)
-        st.caption(f"{len(snaps)} snapshot(s), {int(snaps['Deals'].sum())} deal "
-                   f"rows — folder: `{cfg['deals_dir']}`")
+        st.caption(f"{len(snaps)} GP snapshot(s), {int(snaps['Deals'].sum())} "
+                   f"deal rows in `{db_publish.DB_FILENAME}` — folder: "
+                   f"`{cfg['deals_dir']}`")
+
+        with st.expander("Remove a GP snapshot from the database"):
+            labels = [f"{r.GP} — as of {r['As of']} ({int(r.Deals)} rows)"
+                      for _, r in snaps.iterrows()]
+            pick = st.selectbox("Snapshot to remove", labels, key="del_pick")
+            sure = st.checkbox("I understand this removes those rows from the "
+                               "database (a backup is kept under history/)",
+                               key="del_sure")
+            del_by = st.text_input("Removed by",
+                                   value=st.session_state.analyst_name or "",
+                                   key="del_by")
+            if st.button("Remove snapshot", disabled=not sure):
+                row = snaps.iloc[labels.index(pick)]
+                try:
+                    n = db_publish.delete_snapshot(
+                        cfg["deals_dir"], row["GP"], row["As of"],
+                        deleted_by=del_by.strip())
+                    st.success(f"Removed {n} rows ({row['GP']}, as of "
+                               f"{row['As of']}). Undo any time from the "
+                               "history below.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Remove failed: {e}")
     else:
-        st.caption(f"No snapshots yet — folder: `{cfg['deals_dir']}`")
+        st.caption(f"Database is empty — folder: `{cfg['deals_dir']}`")
+
+    backups = db_publish.list_backups(cfg["deals_dir"])
+    if len(backups):
+        with st.expander("History & undo"):
+            st.caption("Every publish, remove and restore saves the previous "
+                       "database here first. Restoring puts the database back "
+                       "exactly as it was at that moment — and the restore "
+                       "itself is backed up too, so nothing is one-way.")
+            st.dataframe(backups, use_container_width=True, hide_index=True)
+            pick_b = st.selectbox("Restore the database as it was…",
+                                  backups["Backup"].tolist(), key="rest_pick")
+            sure_b = st.checkbox("Replace the current database with this copy",
+                                 key="rest_sure")
+            rest_by = st.text_input("Restored by",
+                                    value=st.session_state.analyst_name or "",
+                                    key="rest_by")
+            if st.button("Restore", disabled=not sure_b):
+                try:
+                    db_publish.restore_backup(cfg["deals_dir"], pick_b,
+                                              restored_by=rest_by.strip())
+                    st.success("Database restored.")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"Restore failed: {e}")
 
 
 if st.session_state.get("app_mode") == "Publish to database":

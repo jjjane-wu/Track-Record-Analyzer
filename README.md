@@ -64,7 +64,7 @@ package downloads (IT can allow `pypi.org`).
 | `User Guide.md` | How to use the app, screen by screen |
 | `TR-Analyzer User Manual.docx` | Illustrated end-to-end manual for analysts — download, setup, the full workflow, troubleshooting |
 | `WORKFLOW.md` | Technical documentation of the pipeline (for maintainers) |
-| `database/POWERBI_SETUP.md` | The cross-GP deal database (Excel snapshots in the team's uploader format → SharePoint → Power BI): how it works and how to connect |
+| `database/POWERBI_SETUP.md` | The cross-GP deal database (one consolidated workbook in the team's uploader format → SharePoint → Power BI): how it works and how to connect |
 
 Created at first run, not in the repository: `venv/` (the app's private
 Python environment), `outputs/` (a backup copy of every generated workbook),
