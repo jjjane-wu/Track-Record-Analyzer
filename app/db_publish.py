@@ -2,7 +2,7 @@
 db_publish.py — Publish a *verified* Deal Level Input workbook to the database.
 
 The database is deliberately simple: ONE consolidated workbook
-("TR Deal Database.xlsx") in the team's uploader-sheet format, holding every
+("GP Track Record Database.xlsx") in the team's uploader-sheet format, holding every
 GP's rows together. Publishing a GP merges its rows in (same GP + as-of date
 replaces in place); nothing else is touched. Every change first copies the
 current database into a history/ subfolder, and an action log rides along on
@@ -429,7 +429,8 @@ def _safe_num(v: Any) -> float | None:
         return None
 
 
-DB_FILENAME  = "TR Deal Database.xlsx"
+DB_FILENAME  = "GP Track Record Database.xlsx"
+_OLD_DB_FILENAMES = ("TR Deal Database.xlsx",)
 HISTORY_DIR  = "history"
 DB_SHEET     = "Deal Level Inputs"
 LOG_SHEET    = "_Log"
@@ -441,7 +442,17 @@ _LOG_COLS = ["When", "Action", "GP", "As of", "Rows", "By", "Source File"]
 
 
 def db_path(db_dir: str | Path) -> Path:
-    return Path(db_dir).expanduser() / DB_FILENAME
+    """Path of the database workbook — renaming any copy still carrying an
+    older filename so every user converges on the same file."""
+    d = Path(db_dir).expanduser()
+    target = d / DB_FILENAME
+    if not target.exists():
+        for old_name in _OLD_DB_FILENAMES:
+            old_p = d / old_name
+            if old_p.exists() and not (d / ("~$" + old_name)).exists():
+                old_p.rename(target)
+                break
+    return target
 
 
 def _check_not_open(path: Path) -> None:

@@ -84,7 +84,7 @@ with st.sidebar:
 
     app_mode = st.radio(
         "Mode",
-        ["Analyze a GP file", "Publish to database"],
+        ["Analyze a GP file", "Publish to GP Track Record Database"],
         key="app_mode",
         label_visibility="collapsed",
     )
@@ -182,7 +182,7 @@ def _display_workbook_profile(profile: "WorkbookProfile") -> None:
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _render_publish_page() -> None:
-    st.title("Publish to the Deal Database")
+    st.title("Publish to the GP Track Record Database")
     st.markdown(
         "The database only takes **verified** data. First correct and check the "
         "downloaded Deal Level Input file in Excel; when you are sure the "
@@ -333,7 +333,7 @@ def _render_publish_page() -> None:
                     st.error(f"Restore failed: {e}")
 
 
-if st.session_state.get("app_mode") == "Publish to database":
+if st.session_state.get("app_mode") == "Publish to GP Track Record Database":
     _render_publish_page()
     st.stop()
 
@@ -878,7 +878,7 @@ elif st.session_state.screen == 3:
             "*Processing another GP later? Just run the macro again with the "
             "new file — everything rebuilds, nothing to clean up first.*\n\n"
             "*Once you've verified the numbers, the same file can go into the "
-            "deal database — switch to **Publish to database** in the sidebar.*"
+            "deal database — switch to **Publish to GP Track Record Database** in the sidebar.*"
         )
 
     # ── Mapping log preview ──────────────────────────────────────────

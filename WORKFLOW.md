@@ -77,11 +77,11 @@ mapping is what drives generation.
 - Shows summary metrics, the full mapping log, and an error log if any
   phase failed
 
-### Publish to database (sidebar mode, outside the 3-screen flow)
+### Publish to GP Track Record Database (sidebar mode, outside the 3-screen flow)
 
 A separate, deliberately manual step (`db_publish.py`): the analyst
 corrects and verifies the downloaded Deal Level Input in Excel, then
-uploads that file on the **Publish to database** page. The app re-parses
+uploads that file on the **Publish to GP Track Record Database** page. The app re-parses
 it (label-located, so hand edits survive), validates it — hard errors
 (blank companies, text in numeric columns, unreadable dates) block the
 publish; soft warnings need an explicit tick — and merges into **one consolidated Excel

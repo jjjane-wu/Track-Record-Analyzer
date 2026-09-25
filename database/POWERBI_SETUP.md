@@ -6,11 +6,11 @@
 
 ## How the database works
 
-The database is **one Excel workbook** — `TR Deal Database.xlsx` — holding
+The database is **one Excel workbook** — `GP Track Record Database.xlsx` — holding
 every GP's verified deals together, one row per deal, with the track record
 date and GP name on every row. No server, no credentials.
 
-- Every publish from the app (sidebar → **Publish to database**) merges that
+- Every publish from the app (sidebar → **Publish to GP Track Record Database**) merges that
   GP's rows into the workbook. Re-publishing the same GP + as-of date
   **replaces** those rows only — a correction never duplicates, and no other
   GP is touched. A new as-of date adds alongside, so the history of a GP's
@@ -37,10 +37,10 @@ database folder *is* a synced SharePoint folder:
    e.g. `Documents/TR Database`.
 2. Open that folder in the browser and click **Sync** (or **Add shortcut to
    OneDrive**). It now appears in Finder/Explorer as a normal local folder.
-3. In the app: **Publish to database → Database folder** → paste the local
+3. In the app: **Publish to GP Track Record Database → Database folder** → paste the local
    path of that synced folder → **Save folder**.
 
-From then on, every publish updates `TR Deal Database.xlsx` in the folder
+From then on, every publish updates `GP Track Record Database.xlsx` in the folder
 and the OneDrive client uploads it to SharePoint in the background. Until
 SharePoint is set up, the default folder `database/deals/` next to the app
 works fine — you can move the file and re-point the folder later. One
@@ -52,7 +52,7 @@ the file open in Excel — it will say so and wait for you to close it.
 ## Connect Power BI
 
 1. Power BI Desktop → **Get Data → Web** → paste the SharePoint link to
-   `TR Deal Database.xlsx` (or **Get Data → Excel workbook** and browse to
+   `GP Track Record Database.xlsx` (or **Get Data → Excel workbook** and browse to
    the synced local copy) → sign in.
 2. Pick the **Deal Level Inputs** sheet (or the `GrossDealLevelInput`
    table) → **Transform Data**. One table, no combining step needed.

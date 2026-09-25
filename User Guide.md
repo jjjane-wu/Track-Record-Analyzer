@@ -115,14 +115,14 @@ so nothing enters the database until a person has checked it.
 
 1. Open the corrected Deal Level Input file in Excel one last time — this
    exact file is what gets published.
-2. In the app's sidebar, switch to **Publish to database**.
+2. In the app's sidebar, switch to **Publish to GP Track Record Database**.
 3. Upload the file. The app re-checks it and shows the results:
    - **Errors** (missing company names, text in number columns, unreadable
      dates) **block publishing** — fix them in Excel and upload again.
    - **Warnings** (blank funds, odd-looking IRRs, duplicate deals) don't
      block, but you must tick a box confirming you've checked them.
 4. Click **Publish**. Your GP's rows merge into the one consolidated
-   database workbook (`TR Deal Database.xlsx`) — the team's **GP TR
+   database workbook (`GP Track Record Database.xlsx`) — the team's **GP TR
    Database Uploader Input Sheet** format, colours and all, every row
    carrying its track record date and GP name — which Power BI reads
    directly.
@@ -136,7 +136,7 @@ the database to any earlier state** (each of those is backed up too). The
 page also lists everything currently in the database.
 
 The database folder is just a folder. Once it points at the team's
-OneDrive-synced SharePoint folder (**Publish to database → Database
+OneDrive-synced SharePoint folder (**Publish to GP Track Record Database → Database
 folder**), every publish uploads itself and the Power BI dashboard picks it
 up on its next refresh — setup notes in `database/POWERBI_SETUP.md`.
 
